@@ -15,6 +15,7 @@ use std::slice::Iter;
 
 // --- Structs for reading PostGIS geometries into
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, Clone, Copy, Debug, Default)]
 pub struct Point {
     pub x: f64,
@@ -22,6 +23,7 @@ pub struct Point {
     pub srid: Option<i32>,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, Clone, Copy, Debug, Default)]
 pub struct PointZ {
     pub x: f64,
@@ -30,6 +32,7 @@ pub struct PointZ {
     pub srid: Option<i32>,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, Clone, Copy, Debug, Default)]
 pub struct PointM {
     pub x: f64,
@@ -38,6 +41,7 @@ pub struct PointM {
     pub srid: Option<i32>,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, Clone, Copy, Debug, Default)]
 pub struct PointZM {
     pub x: f64,
@@ -47,6 +51,7 @@ pub struct PointZM {
     pub srid: Option<i32>,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub enum PointType {
     Point,
@@ -400,6 +405,7 @@ macro_rules! point_container_type {
     // geometries containing points
     ($geotypetrait:ident for $geotype:ident) => {
         /// $geotypetrait
+        #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
         #[derive(PartialEq, Clone, Debug)]
         pub struct $geotype<P: postgis::Point + EwkbRead> {
             pub points: Vec<P>,
@@ -448,6 +454,7 @@ macro_rules! point_container_type {
 macro_rules! geometry_container_type {
     // geometries containing lines and polygons
     ($geotypetrait:ident for $geotype:ident contains $itemtype:ident named $itemname:ident) => {
+        #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
         #[derive(PartialEq, Clone, Debug)]
         pub struct $geotype<P: postgis::Point + EwkbRead> {
             pub $itemname: Vec<$itemtype<P>>,
@@ -964,6 +971,7 @@ pub type MultiPolygonM = MultiPolygonT<PointM>;
 pub type MultiPolygonZM = MultiPolygonT<PointZM>;
 
 /// Generic Geometry Data Type
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug)]
 pub enum GeometryT<P: postgis::Point + EwkbRead> {
     Point(P),
@@ -1299,6 +1307,7 @@ pub type GeometryM = GeometryT<PointM>;
 /// OGC GeometryZM type
 pub type GeometryZM = GeometryT<PointZM>;
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug)]
 pub struct GeometryCollectionT<P: postgis::Point + EwkbRead> {
     pub geometries: Vec<GeometryT<P>>,
@@ -1906,4 +1915,57 @@ fn test_iterators() {
     let p = |x, y| Point { x: x, y: y, srid: None };
     let line = self::LineStringT::<Point> {srid: Some(4326), points: vec![p(10.0, -20.0), p(0., -0.5)]};
     assert_eq!(line.points().last(), Some(&Point { x: 0., y: -0.5, srid: None }));
+}
+
+#[cfg(all(test, feature = "serde"))]
+mod serde_tests {
+    use super::*;
+    use serde_json;
+
+    #[test]
+    fn test_serde_point() {
+        let point = Point {
+            x: 10.0,
+            y: 20.0,
+            srid: Some(4326),
+        };
+        
+        let serialized = serde_json::to_string(&point).unwrap();
+        let deserialized: Point = serde_json::from_str(&serialized).unwrap();
+        
+        assert_eq!(point, deserialized);
+    }
+    
+    #[test]
+    fn test_serde_point_z() {
+        let point = PointZ {
+            x: 10.0,
+            y: 20.0,
+            z: 30.0,
+            srid: Some(4326),
+        };
+        
+        let serialized = serde_json::to_string(&point).unwrap();
+        let deserialized: PointZ = serde_json::from_str(&serialized).unwrap();
+        
+        assert_eq!(point, deserialized);
+    }
+    
+    #[test]
+    fn test_serde_geometry_t() {
+        let point = Point {
+            x: 10.0,
+            y: 20.0,
+            srid: Some(4326),
+        };
+        let geometry = GeometryT::Point(point);
+        
+        let serialized = serde_json::to_string(&geometry).unwrap();
+        let deserialized: GeometryT<Point> = serde_json::from_str(&serialized).unwrap();
+        
+        match deserialized {
+            GeometryT::Point(p) => assert_eq!(p, point),
+            _ => panic!("Deserialized to wrong variant"),
+        }
+    }
 }

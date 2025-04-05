@@ -1,3 +1,9 @@
+## 0.10.0
+
+* Add optional `serde` feature for serialization/deserialization of geometry types
+* Derive Default for all Point types
+* Implement From<Tuple> for point types
+
 ## 0.9.0 (2021-09-23)
 
 * Fix reading 2D types from Z or ZM geometries

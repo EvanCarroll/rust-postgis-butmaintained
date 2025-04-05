@@ -11,6 +11,7 @@ An extension to rust-postgres, adds support for PostGIS.
 - PostGIS type helper
 - GCJ02 support (used offically in Mainland China)
 - Tiny WKB (TWKB) support
+- Optional serialization/deserialization support via serde
 
 ## Usage
 
@@ -71,3 +72,32 @@ To run the database tests, declare the connection in an environment variable `DB
 Run the tests with
 
     cargo test -- --ignored
+    
+## Serialization with serde
+
+This crate provides optional support for serializing and deserializing geometry types using serde. To enable this feature, add the following to your `Cargo.toml`:
+
+```toml
+[dependencies]
+postgis = { version = "0.9.0", features = ["serde"] }
+```
+
+With this feature enabled, all geometry types in `ewkb` and `twkb` modules will implement `Serialize` and `Deserialize` traits:
+
+```rust
+use postgis::ewkb::Point;
+use serde_json;
+
+let point = Point {
+    x: 1.0,
+    y: 2.0,
+    srid: Some(4326),
+};
+
+// Serialize to JSON
+let json = serde_json::to_string(&point).unwrap();
+println!("{}", json);
+
+// Deserialize from JSON
+let deserialized: Point = serde_json::from_str(&json).unwrap();
+```

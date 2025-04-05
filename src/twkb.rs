@@ -24,34 +24,40 @@ use std::io::prelude::*;
 use std::slice::Iter;
 use std::u8;
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, Clone, Copy, Debug, Default)]
 pub struct Point {
     pub x: f64,
     pub y: f64, // TODO: support for z, m
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, Clone, Debug)]
 pub struct LineString {
     pub points: Vec<Point>,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, Clone, Debug)]
 pub struct Polygon {
     pub rings: Vec<LineString>,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, Clone, Debug)]
 pub struct MultiPoint {
     pub points: Vec<Point>,
     pub ids: Option<Vec<u64>>,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, Clone, Debug)]
 pub struct MultiLineString {
     pub lines: Vec<LineString>,
     pub ids: Option<Vec<u64>>,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, Clone, Debug)]
 pub struct MultiPolygon {
     pub polygons: Vec<Polygon>,
@@ -59,6 +65,7 @@ pub struct MultiPolygon {
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Default, Debug)]
 pub struct TwkbInfo {
     geom_type: u8,
@@ -721,4 +728,38 @@ fn test_write_multipoly() {
     let multipoly = MultiPolygon::read_twkb(&mut twkb.as_slice()).unwrap();
     assert_eq!(format!("{:?}", multipoly.as_ewkb()), "EwkbMultiPolygon");
     assert_eq!(multipoly.as_ewkb().to_hex_ewkb(), "010600000002000000010300000001000000050000000000000000000000000000000000000000000000000000400000000000000000000000000000004000000000000000400000000000000000000000000000004000000000000000000000000000000000010300000001000000050000000000000000002440000000000000244000000000000000C0000000000000244000000000000000C000000000000000C0000000000000244000000000000000C000000000000024400000000000002440");
+}
+
+#[cfg(all(test, feature = "serde"))]
+mod serde_tests {
+    use super::*;
+    use serde_json;
+
+    #[test]
+    fn test_serde_point() {
+        let point = Point {
+            x: 10.0,
+            y: -20.0,
+        };
+        
+        let serialized = serde_json::to_string(&point).unwrap();
+        let deserialized: Point = serde_json::from_str(&serialized).unwrap();
+        
+        assert_eq!(point, deserialized);
+    }
+    
+    #[test]
+    fn test_serde_linestring() {
+        let line = LineString {
+            points: vec![
+                Point { x: 10.0, y: -20.0 },
+                Point { x: 0.0, y: -0.5 },
+            ],
+        };
+        
+        let serialized = serde_json::to_string(&line).unwrap();
+        let deserialized: LineString = serde_json::from_str(&serialized).unwrap();
+        
+        assert_eq!(line, deserialized);
+    }
 }
