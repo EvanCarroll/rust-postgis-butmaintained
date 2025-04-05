@@ -339,14 +339,14 @@ mod tests {
         or_panic!(client.execute("CREATE TEMPORARY TABLE geomtests (geom geometry(Point))", &[]));
 
         // 'POINT (10 -20)'
-        let point = ewkb::Point { x: 10.0, y: -20.0, srid: None };
+        let point = ewkb::Point::new(10.0, -20.0, None);
         or_panic!(client.execute("INSERT INTO geomtests (geom) VALUES ($1)", &[&point]));
         let result = or_panic!(client.query("SELECT geom=ST_GeomFromEWKT('POINT(10 -20)') FROM geomtests", &[]));
         assert!(result.iter().map(|r| r.get::<_, bool>(0)).last().unwrap());
         or_panic!(client.execute("TRUNCATE geomtests", &[]));
 
         // With SRID
-        let point = ewkb::Point { x: 10.0, y: -20.0, srid: Some(4326) };
+        let point = ewkb::Point::new(10.0, -20.0, Some(4326));
         or_panic!(client.execute("INSERT INTO geomtests (geom) VALUES ($1)", &[&point]));
         let result = or_panic!(client.query("SELECT geom=ST_GeomFromEWKT('SRID=4326;POINT(10 -20)') FROM geomtests", &[]));
         assert!(result.iter().map(|r| r.get::<_, bool>(0)).last().unwrap());
@@ -355,14 +355,14 @@ mod tests {
         let mut client = connect();
         or_panic!(client.execute("CREATE TEMPORARY TABLE geomtests (geom geometry(Point, 4326))", &[]));
 
-        let point = ewkb::Point { x: 10.0, y: -20.0, srid: Some(4326) };
+        let point = ewkb::Point::new(10.0, -20.0, Some(4326));
         or_panic!(client.execute("INSERT INTO geomtests (geom) VALUES ($1)", &[&point]));
         let result = or_panic!(client.query("SELECT geom=ST_GeomFromEWKT('SRID=4326;POINT(10 -20)') FROM geomtests", &[]));
         assert!(result.iter().map(|r| r.get::<_, bool>(0)).last().unwrap());
         or_panic!(client.execute("TRUNCATE geomtests", &[]));
 
         // Missing SRID
-        let point = ewkb::Point { x: 10.0, y: -20.0, srid: None };
+        let point = ewkb::Point::new(10.0, -20.0, None);
         let result = client.execute("INSERT INTO geomtests (geom) VALUES ($1)", &[&point]);
         assert!(format!("{}", result.err().unwrap()).starts_with("db error"));
     }
@@ -374,7 +374,7 @@ mod tests {
         let mut client = connect();
         or_panic!(client.execute("CREATE TEMPORARY TABLE geomtests (geom geometry(LineString))", &[]));
 
-        let p = |x, y| ewkb::Point { x: x, y: y, srid: None };
+        let p = |x, y| ewkb::Point::new(x, y, None);
         // 'LINESTRING (10 -20, -0 -0.5)'
         let line = ewkb::LineString {srid: None, points: vec![p(10.0, -20.0), p(0., -0.5)]};
         or_panic!(client.execute("INSERT INTO geomtests (geom) VALUES ($1)", &[&line]));
@@ -410,7 +410,7 @@ mod tests {
     fn test_insert_polygon() {
         let mut client = connect();
         or_panic!(client.execute("CREATE TEMPORARY TABLE geomtests (geom geometry(Polygon))", &[]));
-        let p = |x, y| ewkb::Point { x: x, y: y, srid: Some(4326) };
+        let p = |x, y| ewkb::Point::new(x, y, Some(4326));
         // SELECT 'SRID=4326;POLYGON ((0 0, 2 0, 2 2, 0 2, 0 0))'::geometry
         let line = ewkb::LineString {srid: Some(4326), points: vec![p(0., 0.), p(2., 0.), p(2., 2.), p(0., 2.), p(0., 0.)]};
         let poly = ewkb::Polygon {srid: Some(4326), rings: vec![line]};
@@ -439,7 +439,7 @@ mod tests {
     fn test_insert_multiline() {
         let mut client = connect();
         or_panic!(client.execute("CREATE TEMPORARY TABLE geomtests (geom geometry(MultiLineString))", &[]));
-        let p = |x, y| ewkb::Point { x: x, y: y, srid: Some(4326) };
+        let p = |x, y| ewkb::Point::new(x, y, Some(4326));
         // SELECT 'SRID=4326;MULTILINESTRING ((10 -20, 0 -0.5), (0 0, 2 0))'::geometry
         let line1 = ewkb::LineString {srid: Some(4326), points: vec![p(10.0, -20.0), p(0., -0.5)]};
         let line2 = ewkb::LineString {srid: Some(4326), points: vec![p(0., 0.), p(2., 0.)]};
@@ -455,7 +455,7 @@ mod tests {
     fn test_insert_multipolygon() {
         let mut client = connect();
         or_panic!(client.execute("CREATE TEMPORARY TABLE geomtests (geom geometry(MultiPolygon))", &[]));
-        let p = |x, y| ewkb::Point { x: x, y: y, srid: Some(4326) };
+        let p = |x, y| ewkb::Point::new(x, y, Some(4326));
         // SELECT 'SRID=4326;MULTIPOLYGON (((0 0, 2 0, 2 2, 0 2, 0 0)), ((10 10, -2 10, -2 -2, 10 -2, 10 10)))'::geometry
         let line = ewkb::LineString {srid: Some(4326), points: vec![p(0., 0.), p(2., 0.), p(2., 2.), p(0., 2.), p(0., 0.)]};
         let poly1 = ewkb::Polygon {srid: Some(4326), rings: vec![line]};
@@ -473,7 +473,7 @@ mod tests {
     fn test_insert_geometry() {
         let mut client = connect();
         or_panic!(client.execute("CREATE TEMPORARY TABLE geomtests (geom geometry)", &[]));
-        let p = |x, y| ewkb::Point { x: x, y: y, srid: Some(4326) };
+        let p = |x, y| ewkb::Point::new(x, y, Some(4326));
         // SELECT 'SRID=4326;MULTIPOLYGON (((0 0, 2 0, 2 2, 0 2, 0 0)), ((10 10, -2 10, -2 -2, 10 -2, 10 10)))'::geometry
         let multipoly = {
             let line = ewkb::LineString {srid: Some(4326), points: vec![p(0., 0.), p(2., 0.), p(2., 2.), p(0., 2.), p(0., 0.)]};
@@ -494,7 +494,7 @@ mod tests {
     fn test_insert_geometrycollection() {
         let mut client = connect();
         or_panic!(client.execute("CREATE TEMPORARY TABLE geomtests (geom geometry(GeometryCollection))", &[]));
-        let p = |x, y| ewkb::Point { x: x, y: y, srid: Some(4326) };
+        let p = |x, y| ewkb::Point::new(x, y, Some(4326));
         // SELECT 'SRID=4326;LINESTRING (10 -20, -0 -0.5)'
         let line = ewkb::LineString {srid: Some(4326), points: vec![p(10.0, -20.0), p(0., -0.5)]};
         // SELECT 'SRID=4326;MULTIPOLYGON (((0 0, 2 0, 2 2, 0 2, 0 0)), ((10 10, -2 10, -2 -2, 10 -2, 10 10)))'::geometry
@@ -525,11 +525,17 @@ mod tests {
         let mut client = connect();
         let result = or_panic!(client.query("SELECT ('POINT(10 -20)')::geometry", &[]));
         let point = result.iter().map(|r| r.get::<_, ewkb::Point>(0)).last().unwrap();
-        assert_eq!(point, ewkb::Point { x: 10.0, y: -20.0, srid: None });
+        let expected = ewkb::Point::new(10.0, -20.0, None);
+        assert_eq!(point.x(), expected.x());
+        assert_eq!(point.y(), expected.y());
+        assert_eq!(point.srid, expected.srid);
 
         let result = or_panic!(client.query("SELECT 'SRID=4326;POINT(10 -20)'::geometry", &[]));
         let point = result.iter().map(|r| r.get::<_, ewkb::Point>(0)).last().unwrap();
-        assert_eq!(point, ewkb::Point { x: 10.0, y: -20.0, srid: Some(4326) });
+        let expected = ewkb::Point::new(10.0, -20.0, Some(4326));
+        assert_eq!(point.x(), expected.x());
+        assert_eq!(point.y(), expected.y());
+        assert_eq!(point.srid, expected.srid);
 
         let result = or_panic!(client.query("SELECT 'SRID=4326;POINT(10 -20 99)'::geometry", &[]));
         let point = result.iter().map(|r| r.get::<_, ewkb::PointZ>(0)).last().unwrap();
@@ -549,17 +555,17 @@ mod tests {
     #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_select_line() {
         let mut client = connect();
-        let p = |x, y| ewkb::Point { x: x, y: y, srid: None };
+        let p = |x, y| ewkb::Point::new(x, y, None);
         let result = or_panic!(client.query("SELECT ('LINESTRING (10 -20, -0 -0.5)')::geometry", &[]));
         let line = result.iter().map(|r| r.get::<_, ewkb::LineString>(0)).last().unwrap();
         assert_eq!(line, ewkb::LineString {srid: None, points: vec![p(10.0, -20.0), p(0., -0.5)]});
 
-        let p = |x, y| ewkb::Point { x: x, y: y, srid: Some(4326) };
+        let p = |x, y| ewkb::Point::new(x, y, Some(4326));
         let result = or_panic!(client.query("SELECT ('SRID=4326;LINESTRING (10 -20, -0 -0.5)')::geometry", &[]));
         let line = result.iter().map(|r| r.get::<_, ewkb::LineString>(0)).last().unwrap();
         assert_eq!(line, ewkb::LineString {srid: Some(4326), points: vec![p(10.0, -20.0), p(0., -0.5)]});
 
-        let p = |x, y| ewkb::Point { x: x, y: y, srid: Some(4326) };
+        let p = |x, y| ewkb::Point::new(x, y, Some(4326));
         let result = or_panic!(client.query("SELECT ('SRID=4326;LINESTRINGZ (10 -20 1, -0 -0.5 1)')::geometry", &[]));
         let line = result.iter().map(|r| r.get::<_, ewkb::LineString>(0)).last().unwrap();
         assert_eq!(line, ewkb::LineString {srid: Some(4326), points: vec![p(10.0, -20.0), p(0., -0.5)]});

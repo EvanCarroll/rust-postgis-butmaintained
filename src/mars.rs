@@ -343,22 +343,14 @@ pub fn to_wgs84(x: f64, y: f64) -> (f64, f64) {
 
 impl ewkb::Point {
     pub fn new_wgs84(x: f64, y: f64) -> ewkb::Point {
-        ewkb::Point {
-            x: x,
-            y: y,
-            srid: Some(4326),
-        }
+        ewkb::Point::new(x, y, Some(4326))
     }
     pub fn from_gcj02(x: f64, y: f64) -> ewkb::Point {
         let (x0, y0) = to_wgs84(x, y);
-        ewkb::Point {
-            x: x0,
-            y: y0,
-            srid: Some(4326),
-        }
+        ewkb::Point::new(x0, y0, Some(4326))
     }
     pub fn to_gcj02(&self) -> (f64, f64) {
-        from_wgs84(self.x, self.y)
+        from_wgs84(self.point.x(), self.point.y())
     }
 }
 
