@@ -417,7 +417,7 @@ macro_rules! point_container_write {
                 w.write_u32::<LittleEndian>(self.geom.points().len() as u32)?;
                 for geom in self.geom.points() {
                     let wkb = EwkbPoint {
-                        geom: geom,
+                        geom,
                         srid: None,
                         point_type: self.point_type.clone(),
                     };
@@ -503,7 +503,7 @@ macro_rules! geometry_container_write {
                 w.write_u32::<LittleEndian>(self.geom.$itemname().len() as u32)?;
                 for geom in self.geom.$itemname() {
                     let wkb = $ewkbitemtype {
-                        geom: geom,
+                        geom,
                         srid: None,
                         point_type: self.point_type.clone(),
                     };
@@ -608,7 +608,7 @@ macro_rules! geometry_container_write {
                 w.write_u32::<LittleEndian>(self.geom.$itemname().len() as u32)?;
                 for geom in self.geom.$itemname() {
                     let wkb = $ewkbitemtype {
-                        geom: geom,
+                        geom,
                         srid: None,
                         point_type: self.point_type.clone(),
                     };
@@ -1302,7 +1302,7 @@ where
             match geom.as_type() {
                 postgis::GeometryType::Point(geom) => {
                     let wkb = EwkbPoint {
-                        geom: geom,
+                        geom,
                         srid: None,
                         point_type: self.point_type.clone(),
                     };
@@ -1310,7 +1310,7 @@ where
                 }
                 postgis::GeometryType::LineString(geom) => {
                     let wkb = EwkbLineString {
-                        geom: geom,
+                        geom,
                         srid: None,
                         point_type: self.point_type.clone(),
                     };
@@ -1318,7 +1318,7 @@ where
                 }
                 postgis::GeometryType::Polygon(geom) => {
                     let wkb = EwkbPolygon {
-                        geom: geom,
+                        geom,
                         srid: None,
                         point_type: self.point_type.clone(),
                     };
@@ -1326,7 +1326,7 @@ where
                 }
                 postgis::GeometryType::MultiPoint(geom) => {
                     let wkb = EwkbMultiPoint {
-                        geom: geom,
+                        geom,
                         srid: None,
                         point_type: self.point_type.clone(),
                     };
@@ -1334,7 +1334,7 @@ where
                 }
                 postgis::GeometryType::MultiLineString(geom) => {
                     let wkb = EwkbMultiLineString {
-                        geom: geom,
+                        geom,
                         srid: None,
                         point_type: self.point_type.clone(),
                     };
@@ -1342,7 +1342,7 @@ where
                 }
                 postgis::GeometryType::MultiPolygon(geom) => {
                     let wkb = EwkbMultiPolygon {
-                        geom: geom,
+                        geom,
                         srid: None,
                         point_type: self.point_type.clone(),
                     };
@@ -1350,7 +1350,7 @@ where
                 }
                 postgis::GeometryType::GeometryCollection(geom) => {
                     let wkb = EwkbGeometryCollection {
-                        geom: geom,
+                        geom,
                         srid: None,
                         point_type: self.point_type.clone(),
                     };
