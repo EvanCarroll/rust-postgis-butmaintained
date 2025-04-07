@@ -16,7 +16,7 @@ pub enum PointType {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, Clone, Copy, Debug, Default)]
 pub struct Point {
-    #[cfg_attr(feature = "serde", derive(serde::flatten))]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub point: _Point,
     pub srid: Option<i32>,
 }
