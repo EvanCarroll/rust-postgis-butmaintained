@@ -1,7 +1,3 @@
-//
-// Copyright (c) Pirmin Kalberer. All rights reserved.
-//
-
 //! Read geometries in [Tiny WKB](https://github.com/TWKB/Specification/blob/master/twkb.md) format.
 //!
 //! ```rust,no_run
@@ -22,7 +18,6 @@ use std::f64;
 use std::fmt;
 use std::io::prelude::*;
 use std::slice::Iter;
-use std::u8;
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, Clone, Copy, Debug, Default)]
@@ -737,29 +732,23 @@ mod serde_tests {
 
     #[test]
     fn test_serde_point() {
-        let point = Point {
-            x: 10.0,
-            y: -20.0,
-        };
-        
+        let point = Point { x: 10.0, y: -20.0 };
+
         let serialized = serde_json::to_string(&point).unwrap();
         let deserialized: Point = serde_json::from_str(&serialized).unwrap();
-        
+
         assert_eq!(point, deserialized);
     }
-    
+
     #[test]
     fn test_serde_linestring() {
         let line = LineString {
-            points: vec![
-                Point { x: 10.0, y: -20.0 },
-                Point { x: 0.0, y: -0.5 },
-            ],
+            points: vec![Point { x: 10.0, y: -20.0 }, Point { x: 0.0, y: -0.5 }],
         };
-        
+
         let serialized = serde_json::to_string(&line).unwrap();
         let deserialized: LineString = serde_json::from_str(&serialized).unwrap();
-        
+
         assert_eq!(line, deserialized);
     }
 }
