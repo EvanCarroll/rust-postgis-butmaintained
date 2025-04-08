@@ -9,7 +9,7 @@ readme = "README.md"
 documentation = "https://docs.rs/postgis/"
 keywords = ["PostgreSQL", "PostGIS", "GIS", "GEO"]
 license = "MIT"
-edition = "2018"
+edition = "2024"
 
 [features]
 serde = ["dep:serde", "geo-types/serde"]
