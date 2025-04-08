@@ -14,571 +14,574 @@
 
 use crate::{error::Error, ewkb, types as postgis};
 use byteorder::ReadBytesExt;
-use std::f64;
-use std::fmt;
-use std::io::prelude::*;
-use std::slice::Iter;
+use std::{f64, fmt, io::prelude::*, slice::Iter};
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, Clone, Copy, Debug, Default)]
 pub struct Point {
-    pub x: f64,
-    pub y: f64, // TODO: support for z, m
+	pub x: f64,
+	pub y: f64, // TODO: support for z, m
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, Clone, Debug)]
 pub struct LineString {
-    pub points: Vec<Point>,
+	pub points: Vec<Point>,
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, Clone, Debug)]
 pub struct Polygon {
-    pub rings: Vec<LineString>,
+	pub rings: Vec<LineString>,
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, Clone, Debug)]
 pub struct MultiPoint {
-    pub points: Vec<Point>,
-    pub ids: Option<Vec<u64>>,
+	pub points: Vec<Point>,
+	pub ids: Option<Vec<u64>>,
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, Clone, Debug)]
 pub struct MultiLineString {
-    pub lines: Vec<LineString>,
-    pub ids: Option<Vec<u64>>,
+	pub lines: Vec<LineString>,
+	pub ids: Option<Vec<u64>>,
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, Clone, Debug)]
 pub struct MultiPolygon {
-    pub polygons: Vec<Polygon>,
-    pub ids: Option<Vec<u64>>,
+	pub polygons: Vec<Polygon>,
+	pub ids: Option<Vec<u64>>,
 }
 
 #[doc(hidden)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Default, Debug)]
 pub struct TwkbInfo {
-    geom_type: u8,
-    precision: i8,
-    has_idlist: bool,
-    is_empty_geom: bool,
-    size: Option<u64>,
-    has_z: bool,
-    has_m: bool,
-    prec_z: Option<u8>,
-    prec_m: Option<u8>,
+	geom_type: u8,
+	precision: i8,
+	has_idlist: bool,
+	is_empty_geom: bool,
+	size: Option<u64>,
+	has_z: bool,
+	has_m: bool,
+	prec_z: Option<u8>,
+	prec_m: Option<u8>,
 }
 
 pub trait TwkbGeom: fmt::Debug + Sized {
-    fn read_twkb<R: Read>(raw: &mut R) -> Result<Self, Error> {
-        let mut twkb_info: TwkbInfo = Default::default();
-        // type_and_prec     byte
-        // metadata_header   byte
-        // [extended_dims]   byte
-        // [size]            uvarint
-        // [bounds]          bbox
-        let type_and_prec = raw.read_u8()?;
-        twkb_info.geom_type = type_and_prec & 0x0F;
-        twkb_info.precision = decode_zig_zag_64(((type_and_prec & 0xF0) >> 4) as u64) as i8;
-        let metadata_header = raw.read_u8()?;
-        let has_bbox = (metadata_header & 0b0001) != 0;
-        let has_size_attribute = (metadata_header & 0b0010) != 0;
-        twkb_info.has_idlist = (metadata_header & 0b0100) != 0;
-        let has_ext_prec_info = (metadata_header & 0b1000) != 0;
-        twkb_info.is_empty_geom = (metadata_header & 0b10000) != 0;
-        if has_ext_prec_info {
-            let ext_prec_info = raw.read_u8()?;
-            twkb_info.has_z = ext_prec_info & 0b0001 != 0;
-            twkb_info.has_m = ext_prec_info & 0b0010 != 0;
-            twkb_info.prec_z = Some((ext_prec_info & 0x1C) >> 2);
-            twkb_info.prec_m = Some((ext_prec_info & 0xE0) >> 5);
-        }
-        if has_size_attribute {
-            twkb_info.size = Some(read_raw_varint64(raw)?);
-        }
-        if has_bbox {
-            let _xmin = read_int64(raw)?;
-            let _deltax = read_int64(raw)?;
-            let _ymin = read_int64(raw)?;
-            let _deltay = read_int64(raw)?;
-            if twkb_info.has_z {
-                let _zmin = read_int64(raw)?;
-                let _deltaz = read_int64(raw)?;
-            }
-            if twkb_info.has_m {
-                let _mmin = read_int64(raw)?;
-                let _deltam = read_int64(raw)?;
-            }
-        }
-        Self::read_twkb_body(raw, &twkb_info)
-    }
+	fn read_twkb<R: Read>(raw: &mut R) -> Result<Self, Error> {
+		let mut twkb_info: TwkbInfo = Default::default();
+		// type_and_prec     byte
+		// metadata_header   byte
+		// [extended_dims]   byte
+		// [size]            uvarint
+		// [bounds]          bbox
+		let type_and_prec = raw.read_u8()?;
+		twkb_info.geom_type = type_and_prec & 0x0F;
+		twkb_info.precision = decode_zig_zag_64(((type_and_prec & 0xF0) >> 4) as u64) as i8;
+		let metadata_header = raw.read_u8()?;
+		let has_bbox = (metadata_header & 0b0001) != 0;
+		let has_size_attribute = (metadata_header & 0b0010) != 0;
+		twkb_info.has_idlist = (metadata_header & 0b0100) != 0;
+		let has_ext_prec_info = (metadata_header & 0b1000) != 0;
+		twkb_info.is_empty_geom = (metadata_header & 0b10000) != 0;
+		if has_ext_prec_info {
+			let ext_prec_info = raw.read_u8()?;
+			twkb_info.has_z = ext_prec_info & 0b0001 != 0;
+			twkb_info.has_m = ext_prec_info & 0b0010 != 0;
+			twkb_info.prec_z = Some((ext_prec_info & 0x1C) >> 2);
+			twkb_info.prec_m = Some((ext_prec_info & 0xE0) >> 5);
+		}
+		if has_size_attribute {
+			twkb_info.size = Some(read_raw_varint64(raw)?);
+		}
+		if has_bbox {
+			let _xmin = read_int64(raw)?;
+			let _deltax = read_int64(raw)?;
+			let _ymin = read_int64(raw)?;
+			let _deltay = read_int64(raw)?;
+			if twkb_info.has_z {
+				let _zmin = read_int64(raw)?;
+				let _deltaz = read_int64(raw)?;
+			}
+			if twkb_info.has_m {
+				let _mmin = read_int64(raw)?;
+				let _deltam = read_int64(raw)?;
+			}
+		}
+		Self::read_twkb_body(raw, &twkb_info)
+	}
 
-    #[doc(hidden)]
-    fn read_twkb_body<R: Read>(raw: &mut R, twkb_info: &TwkbInfo) -> Result<Self, Error>;
+	#[doc(hidden)]
+	fn read_twkb_body<R: Read>(raw: &mut R, twkb_info: &TwkbInfo) -> Result<Self, Error>;
 
-    #[doc(hidden)]
-    fn read_relative_point<R: Read>(
-        raw: &mut R,
-        twkb_info: &TwkbInfo,
-        x: f64,
-        y: f64,
-        z: Option<f64>,
-        m: Option<f64>,
-    ) -> Result<(f64, f64, Option<f64>, Option<f64>), Error> {
-        let x2 = x + read_varint64_as_f64(raw, twkb_info.precision)?;
-        let y2 = y + read_varint64_as_f64(raw, twkb_info.precision)?;
-        let z2 = if twkb_info.has_z {
-            let dz = read_varint64_as_f64(raw, twkb_info.precision)?;
-            z.map(|v| v + dz)
-        } else {
-            None
-        };
-        let m2 = if twkb_info.has_m {
-            let dm = read_varint64_as_f64(raw, twkb_info.precision)?;
-            m.map(|v| v + dm)
-        } else {
-            None
-        };
-        Ok((x2, y2, z2, m2))
-    }
+	#[doc(hidden)]
+	fn read_relative_point<R: Read>(
+		raw: &mut R,
+		twkb_info: &TwkbInfo,
+		x: f64,
+		y: f64,
+		z: Option<f64>,
+		m: Option<f64>,
+	) -> Result<(f64, f64, Option<f64>, Option<f64>), Error> {
+		let x2 = x + read_varint64_as_f64(raw, twkb_info.precision)?;
+		let y2 = y + read_varint64_as_f64(raw, twkb_info.precision)?;
+		let z2 = if twkb_info.has_z {
+			let dz = read_varint64_as_f64(raw, twkb_info.precision)?;
+			z.map(|v| v + dz)
+		}
+		else {
+			None
+		};
+		let m2 = if twkb_info.has_m {
+			let dm = read_varint64_as_f64(raw, twkb_info.precision)?;
+			m.map(|v| v + dm)
+		}
+		else {
+			None
+		};
+		Ok((x2, y2, z2, m2))
+	}
 
-    fn read_idlist<R: Read>(raw: &mut R, size: usize) -> Result<Vec<u64>, Error> {
-        let mut idlist = Vec::new();
-        idlist.reserve(size);
-        for _ in 0..size {
-            let id = read_raw_varint64(raw)?;
-            idlist.push(id);
-        }
-        Ok(idlist)
-    }
+	fn read_idlist<R: Read>(raw: &mut R, size: usize) -> Result<Vec<u64>, Error> {
+		let mut idlist = Vec::with_capacity(size);
+		for _ in 0..size {
+			let id = read_raw_varint64(raw)?;
+			idlist.push(id);
+		}
+		Ok(idlist)
+	}
 }
 
 // --- helper functions for reading ---
 
 fn read_raw_varint64<R: Read>(raw: &mut R) -> Result<u64, Error> {
-    // from rust-protobuf
-    let mut r: u64 = 0;
-    let mut i = 0;
-    loop {
-        if i == 10 {
-            return Err(Error::Read("invalid varint".into()));
-        }
-        let b = raw.read_u8()?;
-        // TODO: may overflow if i == 9
-        r |= ((b & 0x7f) as u64) << (i * 7);
-        i += 1;
-        if b < 0x80 {
-            return Ok(r);
-        }
-    }
+	// from rust-protobuf
+	let mut r: u64 = 0;
+	let mut i = 0;
+	loop {
+		if i == 10 {
+			return Err(Error::Read("invalid varint".into()));
+		}
+		let b = raw.read_u8()?;
+		// TODO: may overflow if i == 9
+		r |= ((b & 0x7f) as u64) << (i * 7);
+		i += 1;
+		if b < 0x80 {
+			return Ok(r);
+		}
+	}
 }
 
 fn read_int64<R: Read>(raw: &mut R) -> Result<i64, Error> {
-    read_raw_varint64(raw).map(|v| v as i64)
+	read_raw_varint64(raw).map(|v| v as i64)
 }
 
 fn decode_zig_zag_64(n: u64) -> i64 {
-    ((n >> 1) as i64) ^ (-((n & 1) as i64))
+	((n >> 1) as i64) ^ (-((n & 1) as i64))
 }
 
 fn varint64_to_f64(varint: u64, precision: i8) -> f64 {
-    if precision >= 0 {
-        (decode_zig_zag_64(varint) as f64) / 10u64.pow(precision as u32) as f64
-    } else {
-        (decode_zig_zag_64(varint) as f64) * 10u64.pow(precision.unsigned_abs() as u32) as f64
-    }
+	if precision >= 0 {
+		(decode_zig_zag_64(varint) as f64) / 10u64.pow(precision as u32) as f64
+	}
+	else {
+		(decode_zig_zag_64(varint) as f64) * 10u64.pow(precision.unsigned_abs() as u32) as f64
+	}
 }
 
 fn read_varint64_as_f64<R: Read>(raw: &mut R, precision: i8) -> Result<f64, Error> {
-    read_raw_varint64(raw).map(|v| varint64_to_f64(v, precision))
+	read_raw_varint64(raw).map(|v| varint64_to_f64(v, precision))
 }
 
 // ---
 
 impl Point {
-    fn new_from_opt_vals(x: f64, y: f64, _z: Option<f64>, _m: Option<f64>) -> Self {
-        Self { x, y }
-    }
+	fn new_from_opt_vals(x: f64, y: f64, _z: Option<f64>, _m: Option<f64>) -> Self {
+		Self { x, y }
+	}
 }
 
 impl From<(f64, f64)> for Point {
-    fn from((x, y): (f64, f64)) -> Self {
-        Self { x, y }
-    }
+	fn from((x, y): (f64, f64)) -> Self {
+		Self { x, y }
+	}
 }
 
 impl postgis::Point for Point {
-    fn x(&self) -> f64 {
-        self.x
-    }
-    fn y(&self) -> f64 {
-        self.y
-    }
+	fn x(&self) -> f64 {
+		self.x
+	}
+
+	fn y(&self) -> f64 {
+		self.y
+	}
 }
 
 impl TwkbGeom for Point {
-    fn read_twkb_body<R: Read>(raw: &mut R, twkb_info: &TwkbInfo) -> Result<Self, Error> {
-        if twkb_info.is_empty_geom {
-            return Ok(Point::new_from_opt_vals(f64::NAN, f64::NAN, None, None));
-        }
-        let x = read_varint64_as_f64(raw, twkb_info.precision)?;
-        let y = read_varint64_as_f64(raw, twkb_info.precision)?;
-        let z = if twkb_info.has_z {
-            Some(read_varint64_as_f64(raw, twkb_info.precision)?)
-        } else {
-            None
-        };
-        let m = if twkb_info.has_m {
-            Some(read_varint64_as_f64(raw, twkb_info.precision)?)
-        } else {
-            None
-        };
-        Ok(Self::new_from_opt_vals(x, y, z, m))
-    }
+	fn read_twkb_body<R: Read>(raw: &mut R, twkb_info: &TwkbInfo) -> Result<Self, Error> {
+		if twkb_info.is_empty_geom {
+			return Ok(Point::new_from_opt_vals(f64::NAN, f64::NAN, None, None));
+		}
+		let x = read_varint64_as_f64(raw, twkb_info.precision)?;
+		let y = read_varint64_as_f64(raw, twkb_info.precision)?;
+		let z = if twkb_info.has_z {
+			Some(read_varint64_as_f64(raw, twkb_info.precision)?)
+		}
+		else {
+			None
+		};
+		let m = if twkb_info.has_m {
+			Some(read_varint64_as_f64(raw, twkb_info.precision)?)
+		}
+		else {
+			None
+		};
+		Ok(Self::new_from_opt_vals(x, y, z, m))
+	}
 }
 
 impl<'a> ewkb::AsEwkbPoint<'a> for Point {
-    fn as_ewkb(&'a self) -> ewkb::EwkbPoint<'a> {
-        ewkb::EwkbPoint {
-            geom: self,
-            srid: None,
-            point_type: ewkb::PointType::Point,
-        }
-    }
+	fn as_ewkb(&'a self) -> ewkb::EwkbPoint<'a> {
+		ewkb::EwkbPoint {
+			geom: self,
+			srid: None,
+			point_type: ewkb::PointType::Point,
+		}
+	}
 }
 
 impl TwkbGeom for LineString {
-    fn read_twkb_body<R: Read>(raw: &mut R, twkb_info: &TwkbInfo) -> Result<Self, Error> {
-        // npoints           uvarint
-        // pointarray        varint[]
-        let mut points: Vec<Point> = Vec::new();
-        if !twkb_info.is_empty_geom {
-            let npoints = read_raw_varint64(raw)?;
-            points.reserve(npoints as usize);
-            let mut x = 0.0;
-            let mut y = 0.0;
-            let mut z = if twkb_info.has_z { Some(0.0) } else { None };
-            let mut m = if twkb_info.has_m { Some(0.0) } else { None };
-            for _ in 0..npoints {
-                let (x2, y2, z2, m2) = Self::read_relative_point(raw, twkb_info, x, y, z, m)?;
-                points.push(Point::new_from_opt_vals(x2, y2, z2, m2));
-                x = x2;
-                y = y2;
-                z = z2;
-                m = m2;
-            }
-        }
-        Ok(LineString { points })
-    }
+	fn read_twkb_body<R: Read>(raw: &mut R, twkb_info: &TwkbInfo) -> Result<Self, Error> {
+		// npoints           uvarint
+		// pointarray        varint[]
+		let mut points: Vec<Point> = Vec::new();
+		if !twkb_info.is_empty_geom {
+			let npoints = read_raw_varint64(raw)?;
+			points.reserve(npoints as usize);
+			let mut x = 0.0;
+			let mut y = 0.0;
+			let mut z = if twkb_info.has_z { Some(0.0) } else { None };
+			let mut m = if twkb_info.has_m { Some(0.0) } else { None };
+			for _ in 0..npoints {
+				let (x2, y2, z2, m2) = Self::read_relative_point(raw, twkb_info, x, y, z, m)?;
+				points.push(Point::new_from_opt_vals(x2, y2, z2, m2));
+				x = x2;
+				y = y2;
+				z = z2;
+				m = m2;
+			}
+		}
+		Ok(LineString { points })
+	}
 }
 
 impl<'a> postgis::LineString<'a> for LineString {
-    type ItemType = Point;
-    type Iter = Iter<'a, Self::ItemType>;
-    fn points(&'a self) -> Self::Iter {
-        self.points.iter()
-    }
+	type ItemType = Point;
+	type Iter = Iter<'a, Self::ItemType>;
+
+	fn points(&'a self) -> Self::Iter {
+		self.points.iter()
+	}
 }
 
 impl<'a> ewkb::AsEwkbLineString<'a> for LineString {
-    type PointType = Point;
-    type Iter = Iter<'a, Point>;
-    fn as_ewkb(&'a self) -> ewkb::EwkbLineString<'a, Self::PointType, Self::Iter> {
-        ewkb::EwkbLineString {
-            geom: self,
-            srid: None,
-            point_type: ewkb::PointType::Point,
-        }
-    }
+	type Iter = Iter<'a, Point>;
+	type PointType = Point;
+
+	fn as_ewkb(&'a self) -> ewkb::EwkbLineString<'a, Self::PointType, Self::Iter> {
+		ewkb::EwkbLineString {
+			geom: self,
+			srid: None,
+			point_type: ewkb::PointType::Point,
+		}
+	}
 }
 
 impl TwkbGeom for Polygon {
-    fn read_twkb_body<R: Read>(raw: &mut R, twkb_info: &TwkbInfo) -> Result<Self, Error> {
-        // nrings            uvarint
-        // npoints[0]        uvarint
-        // pointarray[0]     varint[]
-        // ...
-        // npoints[n]        uvarint
-        // pointarray[n]     varint[]
-        let mut rings: Vec<LineString> = Vec::new();
-        let nrings = read_raw_varint64(raw)?;
-        rings.reserve(nrings as usize);
-        let mut x = 0.0;
-        let mut y = 0.0;
-        let mut z = if twkb_info.has_z { Some(0.0) } else { None };
-        let mut m = if twkb_info.has_m { Some(0.0) } else { None };
-        for _ in 0..nrings {
-            let mut points: Vec<Point> = Vec::new();
-            let npoints = read_raw_varint64(raw)?;
-            points.reserve(npoints as usize);
-            let (x0, y0, z0, m0) = (x, y, z, m);
-            for _ in 0..npoints {
-                let (x2, y2, z2, m2) = Self::read_relative_point(raw, twkb_info, x, y, z, m)?;
-                points.push(Point::new_from_opt_vals(x2, y2, z2, m2));
-                x = x2;
-                y = y2;
-                z = z2;
-                m = m2;
-            }
-            // close ring, if necessary
-            if x != x0 && y != y0 && z != z0 && m != m0 {
-                points.push(Point::new_from_opt_vals(x0, y0, z0, m0));
-            }
-            rings.push(LineString { points });
-        }
-        Ok(Polygon { rings })
-    }
+	fn read_twkb_body<R: Read>(raw: &mut R, twkb_info: &TwkbInfo) -> Result<Self, Error> {
+		// nrings            uvarint
+		// npoints[0]        uvarint
+		// pointarray[0]     varint[]
+		// ...
+		// npoints[n]        uvarint
+		// pointarray[n]     varint[]
+		let mut rings: Vec<LineString> = Vec::new();
+		let nrings = read_raw_varint64(raw)?;
+		rings.reserve(nrings as usize);
+		let mut x = 0.0;
+		let mut y = 0.0;
+		let mut z = if twkb_info.has_z { Some(0.0) } else { None };
+		let mut m = if twkb_info.has_m { Some(0.0) } else { None };
+		for _ in 0..nrings {
+			let mut points: Vec<Point> = Vec::new();
+			let npoints = read_raw_varint64(raw)?;
+			points.reserve(npoints as usize);
+			let (x0, y0, z0, m0) = (x, y, z, m);
+			for _ in 0..npoints {
+				let (x2, y2, z2, m2) = Self::read_relative_point(raw, twkb_info, x, y, z, m)?;
+				points.push(Point::new_from_opt_vals(x2, y2, z2, m2));
+				x = x2;
+				y = y2;
+				z = z2;
+				m = m2;
+			}
+			// close ring, if necessary
+			if x != x0 && y != y0 && z != z0 && m != m0 {
+				points.push(Point::new_from_opt_vals(x0, y0, z0, m0));
+			}
+			rings.push(LineString { points });
+		}
+		Ok(Polygon { rings })
+	}
 }
 
 impl<'a> postgis::Polygon<'a> for Polygon {
-    type ItemType = LineString;
-    type Iter = Iter<'a, Self::ItemType>;
-    fn rings(&'a self) -> Self::Iter {
-        self.rings.iter()
-    }
+	type ItemType = LineString;
+	type Iter = Iter<'a, Self::ItemType>;
+
+	fn rings(&'a self) -> Self::Iter {
+		self.rings.iter()
+	}
 }
 
 impl<'a> ewkb::AsEwkbPolygon<'a> for Polygon {
-    type PointType = Point;
-    type PointIter = Iter<'a, Point>;
-    type ItemType = LineString;
-    type Iter = Iter<'a, Self::ItemType>;
-    fn as_ewkb(
-        &'a self,
-    ) -> ewkb::EwkbPolygon<'a, Self::PointType, Self::PointIter, Self::ItemType, Self::Iter> {
-        ewkb::EwkbPolygon {
-            geom: self,
-            srid: None,
-            point_type: ewkb::PointType::Point,
-        }
-    }
+	type ItemType = LineString;
+	type Iter = Iter<'a, Self::ItemType>;
+	type PointIter = Iter<'a, Point>;
+	type PointType = Point;
+
+	fn as_ewkb(
+		&'a self,
+	) -> ewkb::EwkbPolygon<'a, Self::PointType, Self::PointIter, Self::ItemType, Self::Iter> {
+		ewkb::EwkbPolygon {
+			geom: self,
+			srid: None,
+			point_type: ewkb::PointType::Point,
+		}
+	}
 }
 
 impl TwkbGeom for MultiPoint {
-    fn read_twkb_body<R: Read>(raw: &mut R, twkb_info: &TwkbInfo) -> Result<Self, Error> {
-        // npoints           uvarint
-        // [idlist]          varint[]
-        // pointarray        varint[]
-        let mut points: Vec<Point> = Vec::new();
-        let mut ids: Option<Vec<u64>> = None;
-        if !twkb_info.is_empty_geom {
-            let npoints = read_raw_varint64(raw)?;
-            points.reserve(npoints as usize);
+	fn read_twkb_body<R: Read>(raw: &mut R, twkb_info: &TwkbInfo) -> Result<Self, Error> {
+		// npoints           uvarint
+		// [idlist]          varint[]
+		// pointarray        varint[]
+		let mut points: Vec<Point> = Vec::new();
+		let mut ids: Option<Vec<u64>> = None;
+		if !twkb_info.is_empty_geom {
+			let npoints = read_raw_varint64(raw)?;
+			points.reserve(npoints as usize);
 
-            if twkb_info.has_idlist {
-                let idlist = Self::read_idlist(raw, npoints as usize)?;
-                ids = Some(idlist);
-            }
+			if twkb_info.has_idlist {
+				let idlist = Self::read_idlist(raw, npoints as usize)?;
+				ids = Some(idlist);
+			}
 
-            let mut x = 0.0;
-            let mut y = 0.0;
-            let mut z = if twkb_info.has_z { Some(0.0) } else { None };
-            let mut m = if twkb_info.has_m { Some(0.0) } else { None };
-            for _ in 0..npoints {
-                let (x2, y2, z2, m2) = Self::read_relative_point(raw, twkb_info, x, y, z, m)?;
-                points.push(Point::new_from_opt_vals(x2, y2, z2, m2));
-                x = x2;
-                y = y2;
-                z = z2;
-                m = m2;
-            }
-        }
-        Ok(MultiPoint {
-            points,
-            ids,
-        })
-    }
+			let mut x = 0.0;
+			let mut y = 0.0;
+			let mut z = if twkb_info.has_z { Some(0.0) } else { None };
+			let mut m = if twkb_info.has_m { Some(0.0) } else { None };
+			for _ in 0..npoints {
+				let (x2, y2, z2, m2) = Self::read_relative_point(raw, twkb_info, x, y, z, m)?;
+				points.push(Point::new_from_opt_vals(x2, y2, z2, m2));
+				x = x2;
+				y = y2;
+				z = z2;
+				m = m2;
+			}
+		}
+		Ok(MultiPoint { points, ids })
+	}
 }
 
 impl<'a> postgis::MultiPoint<'a> for MultiPoint {
-    type ItemType = Point;
-    type Iter = Iter<'a, Self::ItemType>;
-    fn points(&'a self) -> Self::Iter {
-        self.points.iter()
-    }
+	type ItemType = Point;
+	type Iter = Iter<'a, Self::ItemType>;
+
+	fn points(&'a self) -> Self::Iter {
+		self.points.iter()
+	}
 }
 
 impl<'a> ewkb::AsEwkbMultiPoint<'a> for MultiPoint {
-    type PointType = Point;
-    type Iter = Iter<'a, Point>;
-    fn as_ewkb(&'a self) -> ewkb::EwkbMultiPoint<'a, Self::PointType, Self::Iter> {
-        ewkb::EwkbMultiPoint {
-            geom: self,
-            srid: None,
-            point_type: ewkb::PointType::Point,
-        }
-    }
+	type Iter = Iter<'a, Point>;
+	type PointType = Point;
+
+	fn as_ewkb(&'a self) -> ewkb::EwkbMultiPoint<'a, Self::PointType, Self::Iter> {
+		ewkb::EwkbMultiPoint {
+			geom: self,
+			srid: None,
+			point_type: ewkb::PointType::Point,
+		}
+	}
 }
 
 impl TwkbGeom for MultiLineString {
-    fn read_twkb_body<R: Read>(raw: &mut R, twkb_info: &TwkbInfo) -> Result<Self, Error> {
-        // nlinestrings      uvarint
-        // [idlist]          varint[]
-        // npoints[0]        uvarint
-        // pointarray[0]     varint[]
-        // ...
-        // npoints[n]        uvarint
-        // pointarray[n]     varint[]
-        let mut lines: Vec<LineString> = Vec::new();
-        let mut ids: Option<Vec<u64>> = None;
-        let nlines = read_raw_varint64(raw)?;
-        lines.reserve(nlines as usize);
+	fn read_twkb_body<R: Read>(raw: &mut R, twkb_info: &TwkbInfo) -> Result<Self, Error> {
+		// nlinestrings      uvarint
+		// [idlist]          varint[]
+		// npoints[0]        uvarint
+		// pointarray[0]     varint[]
+		// ...
+		// npoints[n]        uvarint
+		// pointarray[n]     varint[]
+		let mut lines: Vec<LineString> = Vec::new();
+		let mut ids: Option<Vec<u64>> = None;
+		let nlines = read_raw_varint64(raw)?;
+		lines.reserve(nlines as usize);
 
-        if twkb_info.has_idlist {
-            let idlist = Self::read_idlist(raw, nlines as usize)?;
-            ids = Some(idlist);
-        }
+		if twkb_info.has_idlist {
+			let idlist = Self::read_idlist(raw, nlines as usize)?;
+			ids = Some(idlist);
+		}
 
-        let mut x = 0.0;
-        let mut y = 0.0;
-        let mut z = if twkb_info.has_z { Some(0.0) } else { None };
-        let mut m = if twkb_info.has_m { Some(0.0) } else { None };
-        for _ in 0..nlines {
-            let mut points: Vec<Point> = Vec::new();
-            let npoints = read_raw_varint64(raw)?;
-            points.reserve(npoints as usize);
-            for _ in 0..npoints {
-                let (x2, y2, z2, m2) = Self::read_relative_point(raw, twkb_info, x, y, z, m)?;
-                points.push(Point::new_from_opt_vals(x2, y2, z2, m2));
-                x = x2;
-                y = y2;
-                z = z2;
-                m = m2;
-            }
-            lines.push(LineString { points });
-        }
-        Ok(MultiLineString {
-            lines,
-            ids,
-        })
-    }
+		let mut x = 0.0;
+		let mut y = 0.0;
+		let mut z = if twkb_info.has_z { Some(0.0) } else { None };
+		let mut m = if twkb_info.has_m { Some(0.0) } else { None };
+		for _ in 0..nlines {
+			let mut points: Vec<Point> = Vec::new();
+			let npoints = read_raw_varint64(raw)?;
+			points.reserve(npoints as usize);
+			for _ in 0..npoints {
+				let (x2, y2, z2, m2) = Self::read_relative_point(raw, twkb_info, x, y, z, m)?;
+				points.push(Point::new_from_opt_vals(x2, y2, z2, m2));
+				x = x2;
+				y = y2;
+				z = z2;
+				m = m2;
+			}
+			lines.push(LineString { points });
+		}
+		Ok(MultiLineString { lines, ids })
+	}
 }
 
 impl<'a> postgis::MultiLineString<'a> for MultiLineString {
-    type ItemType = LineString;
-    type Iter = Iter<'a, Self::ItemType>;
-    fn lines(&'a self) -> Self::Iter {
-        self.lines.iter()
-    }
+	type ItemType = LineString;
+	type Iter = Iter<'a, Self::ItemType>;
+
+	fn lines(&'a self) -> Self::Iter {
+		self.lines.iter()
+	}
 }
 
 impl<'a> ewkb::AsEwkbMultiLineString<'a> for MultiLineString {
-    type PointType = Point;
-    type PointIter = Iter<'a, Point>;
-    type ItemType = LineString;
-    type Iter = Iter<'a, Self::ItemType>;
-    fn as_ewkb(
-        &'a self,
-    ) -> ewkb::EwkbMultiLineString<'a, Self::PointType, Self::PointIter, Self::ItemType, Self::Iter>
-    {
-        ewkb::EwkbMultiLineString {
-            geom: self,
-            srid: None,
-            point_type: ewkb::PointType::Point,
-        }
-    }
+	type ItemType = LineString;
+	type Iter = Iter<'a, Self::ItemType>;
+	type PointIter = Iter<'a, Point>;
+	type PointType = Point;
+
+	fn as_ewkb(
+		&'a self,
+	) -> ewkb::EwkbMultiLineString<'a, Self::PointType, Self::PointIter, Self::ItemType, Self::Iter>
+	{
+		ewkb::EwkbMultiLineString {
+			geom: self,
+			srid: None,
+			point_type: ewkb::PointType::Point,
+		}
+	}
 }
 
 impl TwkbGeom for MultiPolygon {
-    fn read_twkb_body<R: Read>(raw: &mut R, twkb_info: &TwkbInfo) -> Result<Self, Error> {
-        // npolygons         uvarint
-        // [idlist]          varint[]
-        // nrings[0]         uvarint
-        // npoints[0][0]     uvarint
-        // pointarray[0][0]  varint[]
-        // ...
-        // nrings[n]         uvarint
-        // npoints[n][m]     uvarint
-        // pointarray[n][m]  varint[]
-        let mut polygons: Vec<Polygon> = Vec::new();
-        let mut ids: Option<Vec<u64>> = None;
-        let npolygons = read_raw_varint64(raw)?;
-        polygons.reserve(npolygons as usize);
+	fn read_twkb_body<R: Read>(raw: &mut R, twkb_info: &TwkbInfo) -> Result<Self, Error> {
+		// npolygons         uvarint
+		// [idlist]          varint[]
+		// nrings[0]         uvarint
+		// npoints[0][0]     uvarint
+		// pointarray[0][0]  varint[]
+		// ...
+		// nrings[n]         uvarint
+		// npoints[n][m]     uvarint
+		// pointarray[n][m]  varint[]
+		let mut polygons: Vec<Polygon> = Vec::new();
+		let mut ids: Option<Vec<u64>> = None;
+		let npolygons = read_raw_varint64(raw)?;
+		polygons.reserve(npolygons as usize);
 
-        if twkb_info.has_idlist {
-            let idlist = Self::read_idlist(raw, npolygons as usize)?;
-            ids = Some(idlist);
-        }
+		if twkb_info.has_idlist {
+			let idlist = Self::read_idlist(raw, npolygons as usize)?;
+			ids = Some(idlist);
+		}
 
-        let mut x = 0.0;
-        let mut y = 0.0;
-        let mut z = if twkb_info.has_z { Some(0.0) } else { None };
-        let mut m = if twkb_info.has_m { Some(0.0) } else { None };
-        for _ in 0..npolygons {
-            let mut rings: Vec<LineString> = Vec::new();
-            let nrings = read_raw_varint64(raw)?;
-            rings.reserve(nrings as usize);
-            for _ in 0..nrings {
-                let mut points: Vec<Point> = Vec::new();
-                let npoints = read_raw_varint64(raw)?;
-                points.reserve(npoints as usize);
-                let (x0, y0, z0, m0) = (x, y, z, m);
-                for _ in 0..npoints {
-                    let (x2, y2, z2, m2) = Self::read_relative_point(raw, twkb_info, x, y, z, m)?;
-                    points.push(Point::new_from_opt_vals(x2, y2, z2, m2));
-                    x = x2;
-                    y = y2;
-                    z = z2;
-                    m = m2;
-                }
-                // close ring, if necessary
-                if x != x0 && y != y0 && z != z0 && m != m0 {
-                    points.push(Point::new_from_opt_vals(x0, y0, z0, m0));
-                }
-                rings.push(LineString { points });
-            }
-            polygons.push(Polygon { rings });
-        }
-        Ok(MultiPolygon {
-            polygons,
-            ids,
-        })
-    }
+		let mut x = 0.0;
+		let mut y = 0.0;
+		let mut z = if twkb_info.has_z { Some(0.0) } else { None };
+		let mut m = if twkb_info.has_m { Some(0.0) } else { None };
+		for _ in 0..npolygons {
+			let mut rings: Vec<LineString> = Vec::new();
+			let nrings = read_raw_varint64(raw)?;
+			rings.reserve(nrings as usize);
+			for _ in 0..nrings {
+				let mut points: Vec<Point> = Vec::new();
+				let npoints = read_raw_varint64(raw)?;
+				points.reserve(npoints as usize);
+				let (x0, y0, z0, m0) = (x, y, z, m);
+				for _ in 0..npoints {
+					let (x2, y2, z2, m2) = Self::read_relative_point(raw, twkb_info, x, y, z, m)?;
+					points.push(Point::new_from_opt_vals(x2, y2, z2, m2));
+					x = x2;
+					y = y2;
+					z = z2;
+					m = m2;
+				}
+				// close ring, if necessary
+				if x != x0 && y != y0 && z != z0 && m != m0 {
+					points.push(Point::new_from_opt_vals(x0, y0, z0, m0));
+				}
+				rings.push(LineString { points });
+			}
+			polygons.push(Polygon { rings });
+		}
+		Ok(MultiPolygon { polygons, ids })
+	}
 }
 
 impl<'a> postgis::MultiPolygon<'a> for MultiPolygon {
-    type ItemType = Polygon;
-    type Iter = Iter<'a, Self::ItemType>;
-    fn polygons(&'a self) -> Self::Iter {
-        self.polygons.iter()
-    }
+	type ItemType = Polygon;
+	type Iter = Iter<'a, Self::ItemType>;
+
+	fn polygons(&'a self) -> Self::Iter {
+		self.polygons.iter()
+	}
 }
 
 impl<'a> ewkb::AsEwkbMultiPolygon<'a> for MultiPolygon {
-    type PointType = Point;
-    type PointIter = Iter<'a, Point>;
-    type LineType = LineString;
-    type LineIter = Iter<'a, Self::LineType>;
-    type ItemType = Polygon;
-    type Iter = Iter<'a, Self::ItemType>;
-    fn as_ewkb(
-        &'a self,
-    ) -> ewkb::EwkbMultiPolygon<
-        'a,
-        Self::PointType,
-        Self::PointIter,
-        Self::LineType,
-        Self::LineIter,
-        Self::ItemType,
-        Self::Iter,
-    > {
-        ewkb::EwkbMultiPolygon {
-            geom: self,
-            srid: None,
-            point_type: ewkb::PointType::Point,
-        }
-    }
+	type ItemType = Polygon;
+	type Iter = Iter<'a, Self::ItemType>;
+	type LineIter = Iter<'a, Self::LineType>;
+	type LineType = LineString;
+	type PointIter = Iter<'a, Point>;
+	type PointType = Point;
+
+	fn as_ewkb(
+		&'a self,
+	) -> ewkb::EwkbMultiPolygon<
+		'a,
+		Self::PointType,
+		Self::PointIter,
+		Self::LineType,
+		Self::LineIter,
+		Self::ItemType,
+		Self::Iter,
+	> {
+		ewkb::EwkbMultiPolygon {
+			geom: self,
+			srid: None,
+			point_type: ewkb::PointType::Point,
+		}
+	}
 }
 
 #[cfg(test)]
 use ewkb::{
-    AsEwkbLineString, AsEwkbMultiLineString, AsEwkbMultiPoint, AsEwkbMultiPolygon, AsEwkbPoint,
-    AsEwkbPolygon, EwkbWrite,
+	AsEwkbLineString, AsEwkbMultiLineString, AsEwkbMultiPoint, AsEwkbMultiPolygon, AsEwkbPoint,
+	AsEwkbPolygon, EwkbWrite,
 };
 
 #[cfg(test)]
@@ -727,28 +730,28 @@ fn test_write_multipoly() {
 
 #[cfg(all(test, feature = "serde"))]
 mod serde_tests {
-    use super::*;
-    use serde_json;
+	use super::*;
+	use serde_json;
 
-    #[test]
-    fn test_serde_point() {
-        let point = Point { x: 10.0, y: -20.0 };
+	#[test]
+	fn test_serde_point() {
+		let point = Point { x: 10.0, y: -20.0 };
 
-        let serialized = serde_json::to_string(&point).unwrap();
-        let deserialized: Point = serde_json::from_str(&serialized).unwrap();
+		let serialized = serde_json::to_string(&point).unwrap();
+		let deserialized: Point = serde_json::from_str(&serialized).unwrap();
 
-        assert_eq!(point, deserialized);
-    }
+		assert_eq!(point, deserialized);
+	}
 
-    #[test]
-    fn test_serde_linestring() {
-        let line = LineString {
-            points: vec![Point { x: 10.0, y: -20.0 }, Point { x: 0.0, y: -0.5 }],
-        };
+	#[test]
+	fn test_serde_linestring() {
+		let line = LineString {
+			points: vec![Point { x: 10.0, y: -20.0 }, Point { x: 0.0, y: -0.5 }],
+		};
 
-        let serialized = serde_json::to_string(&line).unwrap();
-        let deserialized: LineString = serde_json::from_str(&serialized).unwrap();
+		let serialized = serde_json::to_string(&line).unwrap();
+		let deserialized: LineString = serde_json::from_str(&serialized).unwrap();
 
-        assert_eq!(line, deserialized);
-    }
+		assert_eq!(line, deserialized);
+	}
 }
