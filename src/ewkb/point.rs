@@ -1,8 +1,43 @@
 use crate::{error::Error, types as postgis};
+use byteorder::{LittleEndian, WriteBytesExt};
 use geo_types::geometry::Point as _Point;
+use std::fmt;
 use std::io::prelude::*;
 
-use super::{has_m, has_z, read_f64, AsEwkbPoint, EwkbPoint, EwkbRead};
+use super::{has_m, has_z, read_f64, EwkbRead, EwkbWrite};
+
+pub struct EwkbPoint<'a> {
+    pub geom: &'a dyn postgis::Point,
+    pub srid: Option<i32>,
+    pub point_type: PointType,
+}
+
+pub trait AsEwkbPoint<'a> {
+    fn as_ewkb(&'a self) -> EwkbPoint<'a>;
+}
+
+impl<'a> fmt::Debug for EwkbPoint<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "EwkbPoint")?; //TODO
+        Ok(())
+    }
+}
+
+impl<'a> EwkbWrite for EwkbPoint<'a> {
+    fn type_id(&self) -> u32 {
+        0x01 | Self::wkb_type_id(&self.point_type, self.srid)
+    }
+    fn opt_srid(&self) -> Option<i32> {
+        self.srid
+    }
+    fn write_ewkb_body<W: Write + ?Sized>(&self, w: &mut W) -> Result<(), Error> {
+        w.write_f64::<LittleEndian>(self.geom.x())?;
+        w.write_f64::<LittleEndian>(self.geom.y())?;
+        self.geom.opt_z().map(|z| w.write_f64::<LittleEndian>(z));
+        self.geom.opt_m().map(|m| w.write_f64::<LittleEndian>(m));
+        Ok(())
+    }
+}
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(PartialEq, Clone, Copy, Debug)]
