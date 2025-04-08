@@ -1,3 +1,7 @@
+## 0.12.0
+
+* Update to Rust 2024
+
 ## 0.11.0
 
 * Move to geo-types Point type
