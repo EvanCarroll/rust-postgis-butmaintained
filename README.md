@@ -1,4 +1,4 @@
-rust-postgis
+postgis-butmaintained
 ============
 
 [![Build Status](https://travis-ci.org/andelf/rust-postgis.svg?branch=master)](https://travis-ci.org/andelf/rust-postgis)
