@@ -33,8 +33,8 @@ fn yj_sin2(x: f64) -> f64 {
     let cc = (x / 6.28318530717959) as i32;
 
     let mut tt = x - cc as f64 * 6.28318530717959;
-    if tt > 3.1415926535897932 {
-        tt = tt - 3.1415926535897932;
+    if tt > 3.141_592_653_589_793 {
+        tt -= 3.141_592_653_589_793;
         if ff == 1 {
             ff = 0;
         } else if ff == 0 {
@@ -45,16 +45,16 @@ fn yj_sin2(x: f64) -> f64 {
     let mut ss = x;
     let mut s2 = x;
     tt = tt * tt;
-    s2 = s2 * tt;
-    ss = ss - s2 * 0.166666666666667;
-    s2 = s2 * tt;
-    ss = ss + s2 * 8.33333333333333E-03;
-    s2 = s2 * tt;
-    ss = ss - s2 * 1.98412698412698E-04;
-    s2 = s2 * tt;
-    ss = ss + s2 * 2.75573192239859E-06;
-    s2 = s2 * tt;
-    ss = ss - s2 * 2.50521083854417E-08;
+    s2 *= tt;
+    ss -= s2 * 0.166666666666667;
+    s2 *= tt;
+    ss += s2 * 8.33333333333333E-03;
+    s2 *= tt;
+    ss -= s2 * 1.98412698412698E-04;
+    s2 *= tt;
+    ss += s2 * 2.75573192239859E-06;
+    s2 *= tt;
+    ss -= s2 * 2.50521083854417E-08;
     if ff == 1 {
         ss = -ss;
     }
@@ -64,12 +64,9 @@ fn yj_sin2(x: f64) -> f64 {
 fn transform_yj5(x: f64, y: f64) -> f64 {
     let mut tt: f64 =
         300.0 + 1.0 * x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * (x * x).sqrt().sqrt();
-    tt = tt
-        + (20.0 * yj_sin2(18.849555921538764 * x) + 20.0 * yj_sin2(6.283185307179588 * x)) * 0.6667;
-    tt = tt
-        + (20.0 * yj_sin2(3.141592653589794 * x) + 40.0 * yj_sin2(1.047197551196598 * x)) * 0.6667;
-    tt = tt
-        + (150.0 * yj_sin2(0.2617993877991495 * x) + 300.0 * yj_sin2(0.1047197551196598 * x))
+    tt += (20.0 * yj_sin2(18.849555921538764 * x) + 20.0 * yj_sin2(6.283185307179588 * x)) * 0.6667;
+    tt += (20.0 * yj_sin2(3.141592653589794 * x) + 40.0 * yj_sin2(1.047197551196598 * x)) * 0.6667;
+    tt += (150.0 * yj_sin2(0.2617993877991495 * x) + 300.0 * yj_sin2(0.1047197551196598 * x))
             * 0.6667;
     tt
 }
@@ -77,12 +74,9 @@ fn transform_yj5(x: f64, y: f64) -> f64 {
 fn transform_yjy5(x: f64, y: f64) -> f64 {
     let mut tt =
         -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * (x * x).sqrt().sqrt();
-    tt = tt
-        + (20.0 * yj_sin2(18.849555921538764 * x) + 20.0 * yj_sin2(6.283185307179588 * x)) * 0.6667;
-    tt = tt
-        + (20.0 * yj_sin2(3.141592653589794 * y) + 40.0 * yj_sin2(1.047197551196598 * y)) * 0.6667;
-    tt = tt
-        + (160.0 * yj_sin2(0.2617993877991495 * y) + 320.0 * yj_sin2(0.1047197551196598 * y))
+    tt += (20.0 * yj_sin2(18.849555921538764 * x) + 20.0 * yj_sin2(6.283185307179588 * x)) * 0.6667;
+    tt += (20.0 * yj_sin2(3.141592653589794 * y) + 40.0 * yj_sin2(1.047197551196598 * y)) * 0.6667;
+    tt += (160.0 * yj_sin2(0.2617993877991495 * y) + 320.0 * yj_sin2(0.1047197551196598 * y))
             * 0.6667;
     tt
 }
@@ -122,8 +116,8 @@ impl Converter {
         let casm_c: f64 = 453806245.0;
         self.casm_rr = casm_a * self.casm_rr + casm_c;
         let t = (self.casm_rr / 2.0) as i32 as f64;
-        self.casm_rr = self.casm_rr - t * 2.0;
-        self.casm_rr = self.casm_rr / 2.0;
+        self.casm_rr -= t * 2.0;
+        self.casm_rr /= 2.0;
         self.casm_rr
     }
 
@@ -158,15 +152,15 @@ fn wgtochina_lb(
     let casm_v: f64;
     let mut x_add: f64;
     let mut y_add: f64;
-    let h_add: f64;
+    
 
     if wg_heit > 5000 {
         return point;
     }
     let mut x_l = wg_lng as f64;
-    x_l = x_l / 3686400.0;
+    x_l /= 3686400.0;
     let mut y_l = wg_lat as f64;
-    y_l = y_l / 3686400.0;
+    y_l /= 3686400.0;
 
     if x_l < 72.004 {
         return point;
@@ -193,41 +187,39 @@ fn wgtochina_lb(
     let t1_t2: f64 = (me.casm_t2 - me.casm_t1) / 1000.0;
     if t1_t2 <= 0.0 {
         me.casm_t1 = me.casm_t2;
-        me.casm_f = me.casm_f + 1.0;
+        me.casm_f += 1.0;
         me.casm_x1 = me.casm_x2;
-        me.casm_f = me.casm_f + 1.0;
+        me.casm_f += 1.0;
         me.casm_y1 = me.casm_y2;
-        me.casm_f = me.casm_f + 1.0;
-    } else {
-        if t1_t2 > 120.0 {
-            if me.casm_f as i32 == 3 {
-                me.casm_f = 0.0;
-                me.casm_x2 = wg_lng as f64;
-                me.casm_y2 = wg_lat as f64;
-                x1_x2 = me.casm_x2 - me.casm_x1;
-                y1_y2 = me.casm_y2 - me.casm_y1;
-                casm_v = (x1_x2 * x1_x2 + y1_y2 * y1_y2).sqrt() / t1_t2;
-                if casm_v > 3185.0 {
-                    return point;
-                }
+        me.casm_f += 1.0;
+    } else if t1_t2 > 120.0 {
+        if me.casm_f as i32 == 3 {
+            me.casm_f = 0.0;
+            me.casm_x2 = wg_lng as f64;
+            me.casm_y2 = wg_lat as f64;
+            x1_x2 = me.casm_x2 - me.casm_x1;
+            y1_y2 = me.casm_y2 - me.casm_y1;
+            casm_v = (x1_x2 * x1_x2 + y1_y2 * y1_y2).sqrt() / t1_t2;
+            if casm_v > 3185.0 {
+                return point;
             }
-            me.casm_t1 = me.casm_t2;
-            me.casm_f = me.casm_f + 1.0;
-            me.casm_x1 = me.casm_x2;
-            me.casm_f = me.casm_f + 1.0;
-            me.casm_y1 = me.casm_y2;
-            me.casm_f = me.casm_f + 1.0;
         }
+        me.casm_t1 = me.casm_t2;
+        me.casm_f += 1.0;
+        me.casm_x1 = me.casm_x2;
+        me.casm_f += 1.0;
+        me.casm_y1 = me.casm_y2;
+        me.casm_f += 1.0;
     }
     x_add = transform_yj5(x_l - 105.0, y_l - 35.0);
     y_add = transform_yjy5(x_l - 105.0, y_l - 35.0);
-    h_add = wg_heit as f64;
+    let h_add: f64 = wg_heit as f64;
     x_add = x_add + h_add * 0.001 + yj_sin2(wg_time as f64 * 0.0174532925199433) + me.random_yj();
     y_add = y_add + h_add * 0.001 + yj_sin2(wg_time as f64 * 0.0174532925199433) + me.random_yj();
     point = (0.0, 0.0);
     point.0 = (x_l + transform_jy5(y_l, x_add)) * 3686400.0;
     point.1 = (y_l + transform_jyj5(y_l, y_add)) * 3686400.0;
-    return point;
+    point
 }
 
 // WGS84 coords to MARS
@@ -242,14 +234,14 @@ pub fn from_wgs84(x: f64, y: f64) -> (f64, f64) {
         1,
         x1 as i32,
         y1 as i32,
-        gps_height as i32,
-        gps_week as i32,
-        gps_week_time as i32,
+        gps_height,
+        gps_week,
+        gps_week_time,
     );
     let mut tempx = point.0;
     let mut tempy = point.1;
-    tempx = tempx / 3686400.0;
-    tempy = tempy / 3686400.0;
+    tempx /= 3686400.0;
+    tempy /= 3686400.0;
 
     (tempx, tempy)
 }

@@ -20,6 +20,12 @@ macro_rules! point_container_type {
             pub srid: Option<i32>,
         }
 
+        impl<P: postgis::Point + EwkbRead> Default for $geotype<P> {
+            fn default() -> Self {
+                Self::new()
+            }
+        }
+
         impl<P: postgis::Point + EwkbRead> $geotype<P> {
             pub fn new() -> $geotype<P> {
                 $geotype {
@@ -80,8 +86,8 @@ macro_rules! impl_read_for_point_container_type {
                     points.push(P::read_ewkb_body(raw, is_be, type_id, srid)?);
                 }
                 Ok($geotype::<P> {
-                    points: points,
-                    srid: srid,
+                    points,
+                    srid,
                 })
             }
         }
@@ -106,8 +112,8 @@ macro_rules! impl_read_for_point_container_type {
                     points.push(P::read_ewkb(raw)?);
                 }
                 Ok($geotype::<P> {
-                    points: points,
-                    srid: srid,
+                    points,
+                    srid,
                 })
             }
         }

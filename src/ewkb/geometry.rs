@@ -10,6 +10,15 @@ macro_rules! geometry_container_type {
             pub srid: Option<i32>,
         }
 
+        impl<P> Default for $geotype<P>
+        where
+                    P: postgis::Point + EwkbRead,
+         {
+            fn default() -> Self {
+                Self::new()
+            }
+        }
+
         impl<P> $geotype<P>
         where
             P: postgis::Point + EwkbRead,
@@ -74,7 +83,7 @@ macro_rules! impl_read_for_geometry_container_type {
                 }
                 Ok($geotype::<P> {
                     $itemname: $itemname,
-                    srid: srid,
+                    srid,
                 })
             }
         }
@@ -100,7 +109,7 @@ macro_rules! impl_read_for_geometry_container_type {
                 }
                 Ok($geotype::<P> {
                     $itemname: $itemname,
-                    srid: srid,
+                    srid,
                 })
             }
         }
@@ -704,6 +713,15 @@ pub struct GeometryCollectionT<P: postgis::Point + EwkbRead> {
     pub srid: Option<i32>,
 }
 
+impl<P> Default for GeometryCollectionT<P>
+where
+    P: postgis::Point + EwkbRead,
+ {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<P> GeometryCollectionT<P>
 where
     P: postgis::Point + EwkbRead,
@@ -937,7 +955,7 @@ where
                     let wkb = EwkbPoint {
                         geom,
                         srid: None,
-                        point_type: self.point_type.clone(),
+                        point_type: self.point_type,
                     };
                     wkb.write_ewkb(w)?;
                 }
@@ -945,7 +963,7 @@ where
                     let wkb = EwkbLineString {
                         geom,
                         srid: None,
-                        point_type: self.point_type.clone(),
+                        point_type: self.point_type,
                     };
                     wkb.write_ewkb(w)?;
                 }
@@ -953,7 +971,7 @@ where
                     let wkb = EwkbPolygon {
                         geom,
                         srid: None,
-                        point_type: self.point_type.clone(),
+                        point_type: self.point_type,
                     };
                     wkb.write_ewkb(w)?;
                 }
@@ -961,7 +979,7 @@ where
                     let wkb = EwkbMultiPoint {
                         geom,
                         srid: None,
-                        point_type: self.point_type.clone(),
+                        point_type: self.point_type,
                     };
                     wkb.write_ewkb(w)?;
                 }
@@ -969,7 +987,7 @@ where
                     let wkb = EwkbMultiLineString {
                         geom,
                         srid: None,
-                        point_type: self.point_type.clone(),
+                        point_type: self.point_type,
                     };
                     wkb.write_ewkb(w)?;
                 }
@@ -977,7 +995,7 @@ where
                     let wkb = EwkbMultiPolygon {
                         geom,
                         srid: None,
-                        point_type: self.point_type.clone(),
+                        point_type: self.point_type,
                     };
                     wkb.write_ewkb(w)?;
                 }
@@ -985,7 +1003,7 @@ where
                     let wkb = EwkbGeometryCollection {
                         geom,
                         srid: None,
-                        point_type: self.point_type.clone(),
+                        point_type: self.point_type,
                     };
                     wkb.write_ewkb(w)?;
                 }

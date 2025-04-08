@@ -82,7 +82,7 @@ pub trait EwkbWrite: fmt::Debug + Sized {
 
     fn to_hex_ewkb(&self) -> String {
         let mut buf: Vec<u8> = Vec::new();
-        let _ = self.write_ewkb(&mut buf).unwrap();
+        self.write_ewkb(&mut buf).unwrap();
         let hex: String = buf
             .iter()
             .fold(String::new(), |s, &b| s + &format!("{:02X}", b));
@@ -108,7 +108,7 @@ fn has_m(type_id: u32) -> bool {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_point_write() {
     // 'POINT (10 -20)'
     let point = Point::new(10.0, -20.0, None);
@@ -137,7 +137,7 @@ fn test_point_write() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_line_write() {
     let p = |x, y| Point::new(x, y, None);
     // 'LINESTRING (10 -20, 0 -0.5)'
@@ -148,14 +148,14 @@ fn test_line_write() {
     let line = LineStringT::<Point> {srid: Some(4326), points: vec![p(10.0, -20.0), p(0., -0.5)]};
     assert_eq!(line.as_ewkb().to_hex_ewkb(), "0102000020E610000002000000000000000000244000000000000034C00000000000000000000000000000E0BF");
 
-    let p = |x, y, z| PointZ { x: x, y: y, z: z, srid: Some(4326) };
+    let p = |x, y, z| PointZ { x, y, z, srid: Some(4326) };
     // 'SRID=4326;LINESTRING (10 -20 100, 0 0.5 101)'
     let line = LineStringT::<PointZ> {srid: Some(4326), points: vec![p(10.0, -20.0, 100.0), p(0., -0.5, 101.0)]};
     assert_eq!(line.as_ewkb().to_hex_ewkb(), "01020000A0E610000002000000000000000000244000000000000034C000000000000059400000000000000000000000000000E0BF0000000000405940");
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_polygon_write() {
     let p = |x, y| Point::new(x, y, Some(4326));
     // SELECT 'SRID=4326;POLYGON ((0 0, 2 0, 2 2, 0 2, 0 0))'::geometry
@@ -165,16 +165,16 @@ fn test_polygon_write() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_multipoint_write() {
-    let p = |x, y, z| PointZ { x: x, y: y, z: z, srid: Some(4326) };
+    let p = |x, y, z| PointZ { x, y, z, srid: Some(4326) };
     // SELECT 'SRID=4326;MULTIPOINT ((10 -20 100), (0 -0.5 101))'::geometry
     let points = MultiPointT::<PointZ> {srid: Some(4326), points: vec![p(10.0, -20.0, 100.0), p(0., -0.5, 101.0)]};
     assert_eq!(points.as_ewkb().to_hex_ewkb(), "01040000A0E6100000020000000101000080000000000000244000000000000034C0000000000000594001010000800000000000000000000000000000E0BF0000000000405940");
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_multiline_write() {
     let p = |x, y| Point::new(x, y, Some(4326));
     // SELECT 'SRID=4326;MULTILINESTRING ((10 -20, 0 -0.5), (0 0, 2 0))'::geometry
@@ -185,7 +185,7 @@ fn test_multiline_write() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_multipolygon_write() {
     let p = |x, y| Point::new(x, y, Some(4326));
     // SELECT 'SRID=4326;MULTIPOLYGON (((0 0, 2 0, 2 2, 0 2, 0 0)), ((10 10, -2 10, -2 -2, 10 -2, 10 10)))'::geometry
@@ -198,7 +198,7 @@ fn test_multipolygon_write() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_ewkb_adapters() {
     let point = Point::new(10.0, -20.0, Some(4326));
     let ewkb = EwkbPoint { geom: &point, srid: Some(4326), point_type: PointType::Point };
@@ -207,7 +207,7 @@ fn test_ewkb_adapters() {
 }
 
 #[cfg(test)]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn hex_to_vec(hexstr: &str) -> Vec<u8> {
     hexstr.as_bytes().chunks(2).map(|chars| {
         let hb = if chars[0] <= 57 { chars[0] - 48 } else { chars[0] - 55 };
@@ -217,7 +217,7 @@ fn hex_to_vec(hexstr: &str) -> Vec<u8> {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_point_read() {
     // SELECT 'POINT(10 -20)'::geometry
     let ewkb = hex_to_vec("0101000000000000000000244000000000000034C0");
@@ -249,7 +249,7 @@ fn test_point_read() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_line_read() {
     let p = |x, y| Point::new(x, y, None);
     // SELECT 'LINESTRING (10 -20, 0 -0.5)'::geometry
@@ -257,7 +257,7 @@ fn test_line_read() {
     let line = LineStringT::<Point>::read_ewkb(&mut ewkb.as_slice()).unwrap();
     assert_eq!(line, LineStringT::<Point> {srid: None, points: vec![p(10.0, -20.0), p(0., -0.5)]});
 
-    let p = |x, y, z| PointZ { x: x, y: y, z: z, srid: Some(4326) };
+    let p = |x, y, z| PointZ { x, y, z, srid: Some(4326) };
     // SELECT 'SRID=4326;LINESTRING (10 -20 100, 0 -0.5 101)'::geometry
     let ewkb = hex_to_vec("01020000A0E610000002000000000000000000244000000000000034C000000000000059400000000000000000000000000000E0BF0000000000405940");
     let line = LineStringT::<PointZ>::read_ewkb(&mut ewkb.as_slice()).unwrap();
@@ -265,7 +265,7 @@ fn test_line_read() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_polygon_read() {
     let p = |x, y| Point::new(x, y, Some(4326));
     // SELECT 'SRID=4326;POLYGON ((0 0, 2 0, 2 2, 0 2, 0 0))'::geometry
@@ -276,9 +276,9 @@ fn test_polygon_read() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_multipoint_read() {
-    let p = |x, y, z| PointZ { x: x, y: y, z: z, srid: None }; // PostGIS doesn't store SRID for sub-geometries
+    let p = |x, y, z| PointZ { x, y, z, srid: None }; // PostGIS doesn't store SRID for sub-geometries
     // SELECT 'SRID=4326;MULTIPOINT ((10 -20 100), (0 -0.5 101))'::geometry
     let ewkb = hex_to_vec("01040000A0E6100000020000000101000080000000000000244000000000000034C0000000000000594001010000800000000000000000000000000000E0BF0000000000405940");
     let points = MultiPointT::<PointZ>::read_ewkb(&mut ewkb.as_slice()).unwrap();
@@ -286,7 +286,7 @@ fn test_multipoint_read() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_multiline_read() {
     let p = |x, y| Point::new(x, y, None); // PostGIS doesn't store SRID for sub-geometries
     // SELECT 'SRID=4326;MULTILINESTRING ((10 -20, 0 -0.5), (0 0, 2 0))'::geometry
@@ -298,7 +298,7 @@ fn test_multiline_read() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_multipolygon_read() {
     let p = |x, y| Point::new(x, y, None); // PostGIS doesn't store SRID for sub-geometries
     // SELECT 'SRID=4326;MULTIPOLYGON (((0 0, 2 0, 2 2, 0 2, 0 0)), ((10 10, -2 10, -2 -2, 10 -2, 10 10)))'::geometry
@@ -312,7 +312,7 @@ fn test_multipolygon_read() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_geometrycollection_read() {
     // SELECT 'GeometryCollection(POINT (10 10),POINT (30 30),LINESTRING (15 15, 20 20))'::geometry
     let ewkb = hex_to_vec("01070000000300000001010000000000000000002440000000000000244001010000000000000000003E400000000000003E400102000000020000000000000000002E400000000000002E4000000000000034400000000000003440");
@@ -356,7 +356,7 @@ fn test_geometrycollection_read() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_geometry_read() {
     // SELECT 'POINT(10 -20 100 1)'::geometry
     let ewkb = hex_to_vec("01010000C0000000000000244000000000000034C00000000000005940000000000000F03F");
@@ -527,7 +527,7 @@ fn test_geometry_read() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_read_error() {
     // SELECT 'LINESTRING (10 -20, 0 -0.5)'::geometry
     let ewkb = hex_to_vec("010200000002000000000000000000244000000000000034C00000000000000000000000000000E0BF");
@@ -536,7 +536,7 @@ fn test_read_error() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_iterators() {
     // Iterator traits:
     use crate::types::LineString;

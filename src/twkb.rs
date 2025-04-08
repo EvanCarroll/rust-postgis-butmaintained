@@ -170,7 +170,7 @@ fn read_raw_varint64<R: Read>(raw: &mut R) -> Result<u64, Error> {
         }
         let b = raw.read_u8()?;
         // TODO: may overflow if i == 9
-        r = r | (((b & 0x7f) as u64) << (i * 7));
+        r |= ((b & 0x7f) as u64) << (i * 7);
         i += 1;
         if b < 0x80 {
             return Ok(r);
@@ -190,7 +190,7 @@ fn varint64_to_f64(varint: u64, precision: i8) -> f64 {
     if precision >= 0 {
         (decode_zig_zag_64(varint) as f64) / 10u64.pow(precision as u32) as f64
     } else {
-        (decode_zig_zag_64(varint) as f64) * 10u64.pow(precision.abs() as u32) as f64
+        (decode_zig_zag_64(varint) as f64) * 10u64.pow(precision.unsigned_abs() as u32) as f64
     }
 }
 
@@ -202,7 +202,7 @@ fn read_varint64_as_f64<R: Read>(raw: &mut R, precision: i8) -> Result<f64, Erro
 
 impl Point {
     fn new_from_opt_vals(x: f64, y: f64, _z: Option<f64>, _m: Option<f64>) -> Self {
-        Self { x: x, y: y }
+        Self { x, y }
     }
 }
 
@@ -273,7 +273,7 @@ impl TwkbGeom for LineString {
                 m = m2;
             }
         }
-        Ok(LineString { points: points })
+        Ok(LineString { points })
     }
 }
 
@@ -329,9 +329,9 @@ impl TwkbGeom for Polygon {
             if x != x0 && y != y0 && z != z0 && m != m0 {
                 points.push(Point::new_from_opt_vals(x0, y0, z0, m0));
             }
-            rings.push(LineString { points: points });
+            rings.push(LineString { points });
         }
-        Ok(Polygon { rings: rings })
+        Ok(Polygon { rings })
     }
 }
 
@@ -389,8 +389,8 @@ impl TwkbGeom for MultiPoint {
             }
         }
         Ok(MultiPoint {
-            points: points,
-            ids: ids,
+            points,
+            ids,
         })
     }
 }
@@ -450,11 +450,11 @@ impl TwkbGeom for MultiLineString {
                 z = z2;
                 m = m2;
             }
-            lines.push(LineString { points: points });
+            lines.push(LineString { points });
         }
         Ok(MultiLineString {
-            lines: lines,
-            ids: ids,
+            lines,
+            ids,
         })
     }
 }
@@ -530,13 +530,13 @@ impl TwkbGeom for MultiPolygon {
                 if x != x0 && y != y0 && z != z0 && m != m0 {
                     points.push(Point::new_from_opt_vals(x0, y0, z0, m0));
                 }
-                rings.push(LineString { points: points });
+                rings.push(LineString { points });
             }
-            polygons.push(Polygon { rings: rings });
+            polygons.push(Polygon { rings });
         }
         Ok(MultiPolygon {
-            polygons: polygons,
-            ids: ids,
+            polygons,
+            ids,
         })
     }
 }
@@ -582,7 +582,7 @@ use ewkb::{
 };
 
 #[cfg(test)]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn hex_to_vec(hexstr: &str) -> Vec<u8> {
     hexstr.as_bytes().chunks(2).map(|chars| {
         let hb = if chars[0] <= 57 { chars[0] - 48 } else { chars[0] - 87 };
@@ -592,7 +592,7 @@ fn hex_to_vec(hexstr: &str) -> Vec<u8> {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_read_point() {
     let twkb = hex_to_vec("01001427"); // SELECT encode(ST_AsTWKB('POINT(10 -20)'::geometry), 'hex')
     let point = Point::read_twkb(&mut twkb.as_slice()).unwrap();
@@ -620,7 +620,7 @@ fn test_read_point() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_read_line() {
     let twkb = hex_to_vec("02000214271326"); // SELECT encode(ST_AsTWKB('LINESTRING (10 -20, -0 -0.5)'::geometry), 'hex')
     let line = LineString::read_twkb(&mut twkb.as_slice()).unwrap();
@@ -636,7 +636,7 @@ fn test_read_line() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_read_polygon() {
     let twkb = hex_to_vec("03000205000004000004030000030514141700001718000018"); // SELECT encode(ST_AsTWKB('POLYGON ((0 0, 2 0, 2 2, 0 2, 0 0),(10 10, -2 10, -2 -2, 10 -2, 10 10))'::geometry), 'hex')
     let poly = Polygon::read_twkb(&mut twkb.as_slice()).unwrap();
@@ -644,7 +644,7 @@ fn test_read_polygon() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_read_multipoint() {
     let twkb = hex_to_vec("04000214271326"); // SELECT encode(ST_AsTWKB('MULTIPOINT ((10 -20), (0 -0.5))'::geometry), 'hex')
     let points = MultiPoint::read_twkb(&mut twkb.as_slice()).unwrap();
@@ -652,7 +652,7 @@ fn test_read_multipoint() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_read_multiline() {
     let twkb = hex_to_vec("05000202142713260200020400"); // SELECT encode(ST_AsTWKB('MULTILINESTRING ((10 -20, 0 -0.5), (0 0, 2 0))'::geometry), 'hex')
     let lines = MultiLineString::read_twkb(&mut twkb.as_slice()).unwrap();
@@ -660,7 +660,7 @@ fn test_read_multiline() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_read_multipolygon() {
     let twkb = hex_to_vec("060002010500000400000403000003010514141700001718000018"); // SELECT encode(ST_AsTWKB('MULTIPOLYGON (((0 0, 2 0, 2 2, 0 2, 0 0)), ((10 10, -2 10, -2 -2, 10 -2, 10 10)))'::geometry), 'hex')
     let polys = MultiPolygon::read_twkb(&mut twkb.as_slice()).unwrap();
@@ -668,7 +668,7 @@ fn test_read_multipolygon() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_write_point() {
     let twkb = hex_to_vec("01001427"); // SELECT encode(ST_AsTWKB('POINT(10 -20)'::geometry), 'hex')
     let point = Point::read_twkb(&mut twkb.as_slice()).unwrap();
@@ -677,7 +677,7 @@ fn test_write_point() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_write_line() {
     let twkb = hex_to_vec("220002c8018f03c7018603"); // SELECT encode(ST_AsTWKB('LINESTRING (10 -20, -0 -0.5)'::geometry, 1), 'hex')
     let line = LineString::read_twkb(&mut twkb.as_slice()).unwrap();
@@ -686,7 +686,7 @@ fn test_write_line() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_write_polygon() {
     let twkb = hex_to_vec("03000205000004000004030000030514141700001718000018"); // SELECT encode(ST_AsTWKB('POLYGON ((0 0, 2 0, 2 2, 0 2, 0 0),(10 10, -2 10, -2 -2, 10 -2, 10 10))'::geometry), 'hex')
     let polygon = Polygon::read_twkb(&mut twkb.as_slice()).unwrap();
@@ -695,7 +695,7 @@ fn test_write_polygon() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_write_multipoint() {
     let twkb = hex_to_vec("04000214271326"); // SELECT encode(ST_AsTWKB('MULTIPOINT ((10 -20), (0 -0.5))'::geometry), 'hex')
     let multipoint = MultiPoint::read_twkb(&mut twkb.as_slice()).unwrap();
@@ -706,7 +706,7 @@ fn test_write_multipoint() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_write_multiline() {
     let twkb = hex_to_vec("05000202142713260200020400"); // SELECT encode(ST_AsTWKB('MULTILINESTRING ((10 -20, 0 -0.5), (0 0, 2 0))'::geometry), 'hex')
     let multiline = MultiLineString::read_twkb(&mut twkb.as_slice()).unwrap();
@@ -717,7 +717,7 @@ fn test_write_multiline() {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn test_write_multipoly() {
     let twkb = hex_to_vec("060002010500000400000403000003010514141700001718000018"); // SELECT encode(ST_AsTWKB('MULTIPOLYGON (((0 0, 2 0, 2 2, 0 2, 0 0)), ((10 10, -2 10, -2 -2, 10 -2, 10 10)))'::geometry), 'hex')
     let multipoly = MultiPolygon::read_twkb(&mut twkb.as_slice()).unwrap();

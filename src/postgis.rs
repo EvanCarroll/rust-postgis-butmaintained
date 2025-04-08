@@ -26,7 +26,7 @@ macro_rules! accepts_geography {
     };
 }
 
-impl<'a> ToSql for ewkb::EwkbPoint<'a> {
+impl ToSql for ewkb::EwkbPoint<'_> {
     fn to_sql(&self, _: &Type, out: &mut BytesMut) -> Result<IsNull, Box<dyn Error + Sync + Send>> {
         self.write_ewkb(&mut out.writer())?;
         Ok(IsNull::No)
@@ -181,7 +181,7 @@ impl_sql_for_ewkb_type!(EwkbMultiPoint contains points);
 impl_sql_for_ewkb_type!(EwkbMultiLineString contains LineString);
 impl_sql_for_ewkb_type!(multipoly EwkbMultiPolygon contains Polygon);
 
-impl<'a, P> FromSql<'a> for ewkb::GeometryT<P>
+impl<P> FromSql<'_> for ewkb::GeometryT<P>
 where
     P: Point + EwkbRead,
 {
@@ -218,7 +218,7 @@ impl_geometry_to_sql!(ewkb::PointZ);
 impl_geometry_to_sql!(ewkb::PointM);
 impl_geometry_to_sql!(ewkb::PointZM);
 
-impl<'a, P> FromSql<'a> for ewkb::GeometryCollectionT<P>
+impl<P> FromSql<'_> for ewkb::GeometryCollectionT<P>
 where
     P: Point + EwkbRead,
 {
@@ -246,7 +246,7 @@ where
 
 // --- TWKB ---
 
-impl<'a> FromSql<'a> for twkb::Point {
+impl FromSql<'_> for twkb::Point {
     fn from_sql(ty: &Type, raw: &[u8]) -> Result<Self, Box<dyn Error + Sync + Send>> {
         let mut rdr = Cursor::new(raw);
         twkb::Point::read_twkb(&mut rdr)
@@ -256,7 +256,7 @@ impl<'a> FromSql<'a> for twkb::Point {
     accepts!(BYTEA);
 }
 
-impl<'a> FromSql<'a> for twkb::LineString {
+impl FromSql<'_> for twkb::LineString {
     fn from_sql(ty: &Type, raw: &[u8]) -> Result<Self, Box<dyn Error + Sync + Send>> {
         let mut rdr = Cursor::new(raw);
         twkb::LineString::read_twkb(&mut rdr)
@@ -266,7 +266,7 @@ impl<'a> FromSql<'a> for twkb::LineString {
     accepts!(BYTEA);
 }
 
-impl<'a> FromSql<'a> for twkb::Polygon {
+impl FromSql<'_> for twkb::Polygon {
     fn from_sql(ty: &Type, raw: &[u8]) -> Result<Self, Box<dyn Error + Sync + Send>> {
         let mut rdr = Cursor::new(raw);
         twkb::Polygon::read_twkb(&mut rdr)
@@ -276,7 +276,7 @@ impl<'a> FromSql<'a> for twkb::Polygon {
     accepts!(BYTEA);
 }
 
-impl<'a> FromSql<'a> for twkb::MultiPoint {
+impl FromSql<'_> for twkb::MultiPoint {
     accepts!(BYTEA);
     fn from_sql(ty: &Type, raw: &[u8]) -> Result<Self, Box<dyn Error + Sync + Send>> {
         let mut rdr = Cursor::new(raw);
@@ -285,7 +285,7 @@ impl<'a> FromSql<'a> for twkb::MultiPoint {
     }
 }
 
-impl<'a> FromSql<'a> for twkb::MultiLineString {
+impl FromSql<'_> for twkb::MultiLineString {
     fn from_sql(ty: &Type, raw: &[u8]) -> Result<Self, Box<dyn Error + Sync + Send>> {
         let mut rdr = Cursor::new(raw);
         twkb::MultiLineString::read_twkb(&mut rdr)
@@ -295,7 +295,7 @@ impl<'a> FromSql<'a> for twkb::MultiLineString {
     accepts!(BYTEA);
 }
 
-impl<'a> FromSql<'a> for twkb::MultiPolygon {
+impl FromSql<'_> for twkb::MultiPolygon {
     fn from_sql(ty: &Type, raw: &[u8]) -> Result<Self, Box<dyn Error + Sync + Send>> {
         let mut rdr = Cursor::new(raw);
         twkb::MultiPolygon::read_twkb(&mut rdr)
@@ -333,7 +333,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     fn test_insert_point() {
         let mut client = connect();
         or_panic!(client.execute("CREATE TEMPORARY TABLE geomtests (geom geometry(Point))", &[]));
@@ -369,7 +369,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     fn test_insert_line() {
         let mut client = connect();
         or_panic!(client.execute("CREATE TEMPORARY TABLE geomtests (geom geometry(LineString))", &[]));
@@ -395,7 +395,7 @@ mod tests {
         let mut client = connect();
         or_panic!(client.execute("CREATE TEMPORARY TABLE geomtests (geom geometry(LineStringZ, 4326))", &[]));
 
-        let p = |x, y, z| ewkb::PointZ { x: x, y: y, z: z, srid: Some(4326) };
+        let p = |x, y, z| ewkb::PointZ { x, y, z, srid: Some(4326) };
         // 'SRID=4326;LINESTRING (10 -20 100, -0 -0.5 101)'
         let line = ewkb::LineStringZ {srid: Some(4326), points: vec![p(10.0, -20.0, 100.0), p(0., -0.5, 101.0)]};
         or_panic!(client.execute("INSERT INTO geomtests (geom) VALUES ($1)", &[&line]));
@@ -406,7 +406,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     fn test_insert_polygon() {
         let mut client = connect();
         or_panic!(client.execute("CREATE TEMPORARY TABLE geomtests (geom geometry(Polygon))", &[]));
@@ -421,11 +421,11 @@ mod tests {
 
     #[test]
     #[ignore]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     fn test_insert_multipoint() {
         let mut client = connect();
         or_panic!(client.execute("CREATE TEMPORARY TABLE geomtests (geom geometry(MultiPointZ))", &[]));
-        let p = |x, y, z| ewkb::PointZ { x: x, y: y, z: z, srid: Some(4326) };
+        let p = |x, y, z| ewkb::PointZ { x, y, z, srid: Some(4326) };
         // SELECT 'SRID=4326;MULTIPOINT ((10 -20 100), (0 -0.5 101))'::geometry
         let points = ewkb::MultiPointZ {srid: Some(4326), points: vec![p(10.0, -20.0, 100.0), p(0., -0.5, 101.0)]};
         or_panic!(client.execute("INSERT INTO geomtests (geom) VALUES ($1)", &[&points]));
@@ -435,7 +435,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     fn test_insert_multiline() {
         let mut client = connect();
         or_panic!(client.execute("CREATE TEMPORARY TABLE geomtests (geom geometry(MultiLineString))", &[]));
@@ -451,7 +451,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     fn test_insert_multipolygon() {
         let mut client = connect();
         or_panic!(client.execute("CREATE TEMPORARY TABLE geomtests (geom geometry(MultiPolygon))", &[]));
@@ -469,7 +469,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     fn test_insert_geometry() {
         let mut client = connect();
         or_panic!(client.execute("CREATE TEMPORARY TABLE geomtests (geom geometry)", &[]));
@@ -490,7 +490,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     fn test_insert_geometrycollection() {
         let mut client = connect();
         or_panic!(client.execute("CREATE TEMPORARY TABLE geomtests (geom geometry(GeometryCollection))", &[]));
@@ -520,7 +520,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     fn test_select_point() {
         let mut client = connect();
         let result = or_panic!(client.query("SELECT ('POINT(10 -20)')::geometry", &[]));
@@ -552,7 +552,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     fn test_select_line() {
         let mut client = connect();
         let p = |x, y| ewkb::Point::new(x, y, None);
@@ -577,7 +577,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     fn test_select_polygon() {
         let mut client = connect();
         let result = or_panic!(client.query("SELECT 'SRID=4326;POLYGON ((0 0, 2 0, 2 2, 0 2, 0 0))'::geometry", &[]));
@@ -587,7 +587,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     fn test_select_multipoint() {
         let mut client = connect();
         let result = or_panic!(client.query("SELECT 'SRID=4326;MULTIPOINT ((10 -20 100), (0 -0.5 101))'::geometry", &[]));
@@ -597,7 +597,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     fn test_select_multiline() {
         let mut client = connect();
         let result = or_panic!(client.query("SELECT 'SRID=4326;MULTILINESTRING ((10 -20, 0 -0.5), (0 0, 2 0))'::geometry", &[]));
@@ -607,7 +607,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     fn test_select_multipolygon() {
         let mut client = connect();
         let result = or_panic!(client.query("SELECT 'SRID=4326;MULTIPOLYGON (((0 0, 2 0, 2 2, 0 2, 0 0)), ((10 10, -2 10, -2 -2, 10 -2, 10 10)))'::geometry", &[]));
@@ -617,7 +617,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     fn test_select_geometrycollection() {
         let mut client = connect();
         let result = or_panic!(client.query("SELECT 'GeometryCollection(POINT (10 10),POINT (30 30),LINESTRING (15 15, 20 20))'::geometry", &[]));
@@ -627,7 +627,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     fn test_select_geometry() {
         let mut client = connect();
         or_panic!(client.execute("CREATE TEMPORARY TABLE geomtests (geom geometry)", &[]));
@@ -639,7 +639,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     fn test_select_type_error() {
         let mut client = connect();
         let result = or_panic!(client.query("SELECT ('LINESTRING (10 -20, -0 -0.5)')::geometry", &[]));
@@ -649,7 +649,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     fn test_twkb() {
         let mut client = connect();
         let result = or_panic!(client.query("SELECT ST_AsTWKB('POINT(10 -20)'::geometry)", &[]));
@@ -677,7 +677,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     fn test_twkb_insert() {
         let mut client = connect();
         or_panic!(client.execute("CREATE TEMPORARY TABLE geomtests (geom geometry(Point))", &[]));
@@ -704,7 +704,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     #[allow(unused_imports,unused_variables)]
     fn test_examples() {
         use postgres::{Client, NoTls};
