@@ -1,3 +1,7 @@
+## 0.11.0
+
+* Move to geo-types Point type
+
 ## 0.10.0
 
 * Add optional `serde` feature for serialization/deserialization of geometry types
